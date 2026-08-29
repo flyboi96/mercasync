@@ -10,7 +10,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 
 ## Current development slice
 
-- Seven-day shared schedule and dinner plan
+- Separate month-style work calendar and weekly meal calendar
+- Multi-day schedule exceptions, including a one-tap three-week trip range
+- Shared weekly dinner-count control that immediately adjusts the plan and groceries
 - Recipe favorites, ratings, notes, and history surface
 - Shared inventory estimates with confirmation dates and automatic confidence decay
 - One-tap inventory corrections with an exact quantity fallback

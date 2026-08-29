@@ -60,6 +60,14 @@ Added after the original audit:
 - Recurring-profile editing, adding arbitrary inventory items, and scheduled
   automation remain incomplete.
 
+## Version 0.11 planning update
+
+- The work calendar is now a six-row month grid. Tapping a day opens the schedule editor and exceptions are shown directly on every affected date.
+- A schedule exception can cover an inclusive range. The editor includes a one-tap three-week range for work trips, and one saved record drives every affected lunch and dinner.
+- The meals view is a separate seven-day calendar with lunch, dinner, shopping, and eaten/skipped controls.
+- The household can choose zero through six dinners to cook for the week. The shared setting is stored in Firestore and automatically changes the meal plan and calculated grocery needs.
+- Long-trip expansion, adjustable dinner selection, and month-grid boundaries are covered by domain tests.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.

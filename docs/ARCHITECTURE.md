@@ -33,6 +33,7 @@ households/{householdId}/scheduleExceptions/{exceptionId}
   personId
   kind
   date
+  endDate: optional inclusive final date
   title
   location
   createdBy
@@ -63,6 +64,11 @@ households/{householdId}/mealCompletions/{dateAndMealType}
   servings
   status: cooked | skipped
   deductions
+
+households/{householdId}/planningSettings/current
+  dinnerTarget: 0..6
+  updatedBy
+  updatedAt
 ```
 
 Firestore rules authorize reads and writes by checking the signed-in UID against the household's `memberIds`. Clients cannot add themselves to a household or change membership.
@@ -71,7 +77,7 @@ Firestore rules authorize reads and writes by checking the signed-in UID against
 
 Schedule expansion and dinner adaptation are pure domain rules. The UI supplies a seven-day date range plus persisted exceptions and receives derived daily availability, diner count, effort, servings, and an explanation. This keeps planning deterministic and testable and prevents either Firebase or D1 details from leaking into meal-planning code.
 
-Normal days mean both people are home. Exceptions override that baseline for one person and date. Away and work-trip exceptions remove that diner. Late shifts keep the diner but reduce effort and favor leftovers or fast meals. Home, day-off, and holiday overrides restore normal availability.
+Normal days mean both people are home. Exceptions override that baseline for one person over one date or an inclusive date range. Away and work-trip exceptions remove that diner. Late shifts keep the diner but reduce effort and favor leftovers or fast meals. Home, day-off, and holiday overrides restore normal availability. The shared dinner target selects how many recipe dinners to cook; remaining at-home nights become leftovers while the established dinner-out night remains separate.
 
 ## Grocery and inventory reconciliation
 
