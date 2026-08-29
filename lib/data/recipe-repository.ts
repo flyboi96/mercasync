@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, doc, onSnapshot, serverTimestamp, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { STARTER_RECIPES, type Recipe } from '@/lib/domain/recipe';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
@@ -60,4 +60,13 @@ export async function updateRecipePreferences(
     updatedBy: auth.currentUser.uid,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function createRecipe(recipe: Recipe, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  if (!recipe.name.trim() || !recipe.ingredients.length || !recipe.instructions.length) throw new Error('Recipe needs a name, ingredients, and steps.');
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before adding a recipe.');
+  const { id, ...data } = recipe;
+  await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id), { ...data, createdBy: auth.currentUser.uid, createdAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
 }

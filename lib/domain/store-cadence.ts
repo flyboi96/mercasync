@@ -6,7 +6,7 @@ const BULK_POLICIES: Record<string, BulkPolicy> = {
   eggs: { packageQuantity: 24, shelfLifeDays: 28 },
   'rolled-oats': { packageQuantity: 10, shelfLifeDays: 180 },
   'frozen-berries': { packageQuantity: 8, shelfLifeDays: 180, freezable: true },
-  'greek-yogurt': { packageQuantity: 6, shelfLifeDays: 18 },
+  'greek-yogurt': { packageQuantity: 6, shelfLifeDays: 35 },
   cheese: { packageQuantity: 24, shelfLifeDays: 35 },
   almonds: { packageQuantity: 32, shelfLifeDays: 120 },
   'chicken-breast': { packageQuantity: 6, shelfLifeDays: 120, freezable: true },
@@ -26,11 +26,12 @@ export function applyStoreCadence(needs: GroceryNeed[], costcoThisWeek: boolean)
     const twoWeekDemand = rounded(need.quantity * 2);
     const packageUse = policy ? twoWeekDemand / policy.packageQuantity : 0;
     const keepsLongEnough = Boolean(policy && (policy.shelfLifeDays >= 14 || policy.freezable));
-    const minimumUsefulShare = policy?.shelfLifeDays && policy.shelfLifeDays >= 60 ? 0.3 : policy?.freezable ? 0.4 : 0.55;
+    const automaticShare = policy?.shelfLifeDays && policy.shelfLifeDays >= 60 ? 0.3 : policy?.freezable ? 0.4 : 0.55;
+    const minimumUsefulShare = need.store === 'Costco' ? Math.min(automaticShare, 0.2) : automaticShare;
     const earnsBulkTrip = Boolean(costcoThisWeek && policy && keepsLongEnough && packageUse >= minimumUsefulShare);
     if (earnsBulkTrip) {
       const packages = Math.max(1, Math.ceil(twoWeekDemand / policy!.packageQuantity));
-      return { ...need, id: `costco:${need.itemId}:${need.unit}`, store: 'Costco' as const, quantity: rounded(packages * policy!.packageQuantity), storeReason: `${twoWeekDemand} ${need.unit} projected for 2 weeks · bulk package keeps safely`, weeksCovered: 2 as const };
+      return { ...need, id: `costco:${need.itemId}:${need.unit}`, store: 'Costco' as const, quantity: rounded(packages * policy!.packageQuantity), storeReason: `${twoWeekDemand} ${need.unit} projected for 2 weeks · ${need.store === 'Costco' ? 'household prefers Costco and ' : ''}bulk package keeps safely`, weeksCovered: 2 as const };
     }
     return {
       ...need,

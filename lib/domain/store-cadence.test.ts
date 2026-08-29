@@ -13,7 +13,7 @@ describe('store cadence', () => {
   });
 
   it('keeps a small purchase at King Soopers even during Costco week', () => {
-    const yogurt = { ...costcoNeed, id: 'costco:greek-yogurt:cup', itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup' };
+    const yogurt = { ...costcoNeed, id: 'king:greek-yogurt:cup', itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup', store: 'King Soopers' as const };
     expect(applyStoreCadence([yogurt], true)[0]).toMatchObject({ store: 'King Soopers', storeReason: 'Weekly need is too small for the bulk package' });
   });
 

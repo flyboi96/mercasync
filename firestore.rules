@@ -89,6 +89,24 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function validMealOverride(data) {
+      return data.keys().hasOnly(['date', 'kind', 'recipeId', 'servings', 'updatedBy', 'updatedAt'])
+        && data.date is string
+        && (data.kind == 'recipe' || data.kind == 'leftovers' || data.kind == 'eat_out' || data.kind == 'skip')
+        && (data.recipeId == null || data.recipeId is string)
+        && (data.servings == null || (data.servings is int && data.servings >= 0 && data.servings <= 12))
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
+    function validShoppingTrip(data) {
+      return data.keys().hasOnly(['store', 'date', 'updatedBy', 'updatedAt'])
+        && (data.store == 'King Soopers' || data.store == 'Costco')
+        && data.date is string
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
     function validRecipe(data) {
       return data.keys().hasOnly([
           'name', 'mealType', 'description', 'cuisine', 'protein', 'method',
@@ -256,6 +274,18 @@ service cloud.firestore {
         allow read: if isHouseholdMember(householdId);
         allow create, update: if isHouseholdMember(householdId)
           && validRecurringProfile(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /mealOverrides/{date} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId) && validMealOverride(request.resource.data);
+        allow delete: if isHouseholdMember(householdId);
+      }
+
+      match /shoppingTrips/{tripId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId) && validShoppingTrip(request.resource.data);
         allow delete: if false;
       }
 

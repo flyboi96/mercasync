@@ -435,3 +435,44 @@
 @media (max-width: 720px) and (display-mode: standalone) {
   .mobile-header { height: calc(76px + env(safe-area-inset-top)); }
 }
+
+/* Practical planning controls */
+.meal { border: 0; text-align: left; cursor: pointer; font: inherit; }
+.meal-title-button { display: block; width: 100%; padding: 3px 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.month-events i.shopping { background: #fff1b9; color: #664b00; }
+.meal-kind-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 18px; }
+.meal-kind-grid button { min-height: 50px; border: 1px solid #d9d4c6; border-radius: 12px; background: #fffdf7; color: #263a2c; font-weight: 750; }
+.meal-kind-grid button.active { border-color: #21643c; background: #21643c; color: white; }
+.inline-recipe { margin: 12px 0; padding: 14px; border-radius: 14px; background: #f6f1e5; }
+.inline-recipe summary { cursor: pointer; font-weight: 800; }
+.inline-recipe ul, .inline-recipe ol { padding-left: 20px; }
+.inline-recipe li { margin: 7px 0; }
+.inline-recipe ul li { display: flex; justify-content: space-between; gap: 12px; }
+.meal-serving-row, .shopping-date { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 14px 0; padding: 14px; border: 1px solid #ddd6c5; border-radius: 14px; background: #fffdf7; }
+.meal-serving-row span, .shopping-date span { display: grid; gap: 3px; }
+.meal-serving-row small, .shopping-date small { color: #6e746d; }
+.restore-auto { width: 100%; min-height: 48px; border: 0; background: transparent; color: #21643c; font-weight: 800; }
+.add-recipe-button, .add-grocery-button { min-height: 50px; border: 0; border-radius: 14px; background: #e76551; color: white; font-weight: 850; font-size: 14px; }
+.recipe-creator, .grocery-adder { max-height: 92dvh; overflow-y: auto; }
+.recipe-creator textarea { min-height: 110px; resize: vertical; }
+.creator-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.creator-hint { margin: -5px 0 12px; color: #6e746d; font-size: 12px; line-height: 1.45; }
+.shopping-date input { min-height: 44px; padding: 8px; border: 1px solid #cdc8bb; border-radius: 10px; font: inherit; }
+.shopping-item-row { display: grid; grid-template-columns: 1fr auto; overflow: hidden; border: 1px solid #ded8c9; border-radius: 15px; background: #fffdf8; }
+.shopping-item-row.checked { opacity: .58; }
+.shopping-check { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; min-height: 70px; padding: 13px 15px; border: 0; background: transparent; text-align: left; }
+.shopping-check > span:last-child { display: grid; gap: 3px; }
+.shopping-check small { display: block; color: #6e746d; line-height: 1.35; }
+.move-store { width: 94px; border: 0; border-left: 1px solid #e2ddcf; background: #f5f0e5; color: #21643c; font-size: 11px; font-weight: 800; }
+.grocery-adder .creator-grid { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 720px) {
+  .meal-action-backdrop { place-items: end center; padding: 0; }
+  .meal-action-sheet, .recipe-creator, .grocery-adder { width: 100%; max-height: calc(94dvh - env(safe-area-inset-top)); padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
+  .meal-kind-grid { grid-template-columns: repeat(2, 1fr); }
+  .creator-grid { grid-template-columns: 1fr 1fr; }
+  .shopping-date { align-items: stretch; flex-direction: column; }
+  .shopping-date input { width: 100%; font-size: 16px; }
+  .shopping-item-row { grid-template-columns: 1fr 78px; }
+  .move-store { width: 78px; }
+}

@@ -11,9 +11,10 @@ export function mealPlanFingerprint(week: PlanningDay[]) {
   return JSON.stringify(mealPlanDays(week));
 }
 
-export function planningInputFingerprint(schedule: PlanningDay[], recipes: Recipe[]) {
+export function planningInputFingerprint(schedule: PlanningDay[], recipes: Recipe[], overrides: unknown[] = []) {
   return JSON.stringify({
     schedule: schedule.map((day) => ({ date: day.date, alex: day.alex, nathalia: day.nathalia, dinnerSelected: Boolean(day.meal.recipeId) })),
     recipes: recipes.filter((recipe) => recipe.mealType === 'dinner').map((recipe) => ({ id: recipe.id, favorite: recipe.favorite, rating: recipe.rating })),
+    overrides,
   });
 }

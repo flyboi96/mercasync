@@ -96,3 +96,35 @@ export async function setGroceryItemPurchased(
     }
   });
 }
+
+export async function addManualGroceryItem(weekStart: string, item: { name: string; quantity: number; unit: string; store: 'King Soopers' | 'Costco'; note?: string }, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const cleanName = item.name.trim();
+  if (!cleanName || !Number.isFinite(item.quantity) || item.quantity <= 0 || !item.unit.trim()) throw new Error('Enter a valid grocery item.');
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before adding groceries.');
+  const runRef = runDocument(weekStart, householdId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(runRef);
+    const existing = snapshot.exists() ? snapshot.data().items as GroceryRunItem[] : [];
+    const itemId = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const id = `manual:${item.store}:${itemId}:${item.unit.trim().toLowerCase()}`;
+    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit: item.unit.trim().toLowerCase(), store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, note: item.note?.trim() || '' };
+    const items = [...existing.filter((candidate) => candidate.id !== id), manual].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
+    transaction.set(runRef, { weekStart, items, calculationFingerprint: snapshot.data()?.calculationFingerprint || 'manual', createdBy: snapshot.data()?.createdBy || auth.currentUser!.uid, createdAt: snapshot.data()?.createdAt || serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
+  });
+}
+
+export async function moveGroceryItem(weekStart: string, itemId: string, store: 'King Soopers' | 'Costco', householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const { auth } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before moving groceries.');
+  const runRef = runDocument(weekStart, householdId);
+  const { db } = getFirebaseServices();
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(runRef);
+    if (!snapshot.exists()) return;
+    const items = (snapshot.data().items as GroceryRunItem[]).map((item) => item.id === itemId ? { ...item, store, manual: true, note: item.note || `Moved to ${store}` } : item);
+    transaction.update(runRef, { items, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
+  });
+}

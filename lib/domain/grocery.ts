@@ -18,6 +18,8 @@ export type GroceryRunItem = GroceryNeed & {
   checked: boolean;
   purchasedQuantity: number;
   purchasedAt: string | null;
+  manual?: boolean;
+  note?: string;
 };
 
 const storeNames = {
@@ -34,12 +36,12 @@ export function groceryNeedsFingerprint(needs: GroceryNeed[]) {
 }
 
 export function mergeGroceryRunItems(needs: GroceryNeed[], existing: GroceryRunItem[]) {
-  const checked = existing.filter((item) => item.checked);
-  const checkedIds = new Set(checked.map((item) => item.id));
+  const preserved = existing.filter((item) => item.checked || item.manual);
+  const checkedIds = new Set(preserved.map((item) => item.id));
   const pending = needs
     .filter((need) => !checkedIds.has(need.id))
     .map((need) => ({ ...need, checked: false, purchasedQuantity: 0, purchasedAt: null }));
-  return [...pending, ...checked].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
+  return [...pending, ...preserved].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
 }
 
 export function buildGroceryNeeds(

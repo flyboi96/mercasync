@@ -56,4 +56,10 @@ describe('deterministic grocery calculation', () => {
     const merged = mergeGroceryRunItems([{ ...need, quantity: 3 }], [{ ...need, checked: true, purchasedQuantity: 2, purchasedAt: '2026-08-29T00:00:00.000Z' }]);
     expect(merged).toEqual([{ ...need, checked: true, purchasedQuantity: 2, purchasedAt: '2026-08-29T00:00:00.000Z' }]);
   });
+
+  it('preserves manually added items while automatic needs recalculate', () => {
+    const need: GroceryNeed = { id: 'store:yogurt:cup', itemId: 'yogurt', name: 'Yogurt', quantity: 2, unit: 'cup', store: 'Costco', inventoryUsed: 0, sources: ['Lunch'] };
+    const manual = { id: 'manual:King Soopers:flowers:each', itemId: 'flowers', name: 'Flowers', quantity: 1, unit: 'each', store: 'King Soopers' as const, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true };
+    expect(mergeGroceryRunItems([need], [manual])).toContainEqual(manual);
+  });
 });
