@@ -58,9 +58,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (firebaseEnabled && !auth.session) return;
+    if (firebaseEnabled) return;
     fetch('/api/home').then((response) => response.ok ? response.json() : null).then((data) => { if (data?.groceries?.length) setItems(data.groceries); if (data?.inventory?.length) setInventory(data.inventory); }).catch(() => undefined);
-  }, [auth.session, firebaseEnabled]);
+  }, [firebaseEnabled]);
   useEffect(() => {
     if (firebaseEnabled && !auth.session) return;
     return subscribeToScheduleExceptions(
@@ -73,6 +73,10 @@ export default function Home() {
     const current = items.find((item) => item.id === id); if (!current) return;
     const checked = !current.checked;
     setItems((all) => all.map((item) => item.id === id ? { ...item, checked } : item));
+    if (firebaseEnabled) {
+      notify('Updated for this session. Shared grocery sync is not migrated yet.');
+      return;
+    }
     try {
       const response = await fetch('/api/home', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, checked }) });
       if (!response.ok) throw new Error('save failed');
