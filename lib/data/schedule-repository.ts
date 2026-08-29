@@ -3,8 +3,11 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   onSnapshot,
   serverTimestamp,
+  updateDoc,
   type DocumentData,
   type QueryDocumentSnapshot,
   type Unsubscribe,
@@ -119,4 +122,23 @@ export async function createScheduleException(
   });
   if (!response.ok) throw new Error('Could not save the schedule exception.');
   return response.json();
+}
+
+export async function updateScheduleException(
+  id: string,
+  input: CreateScheduleException,
+  householdId?: string,
+) {
+  if (!usesFirebaseBackend()) throw new Error('Schedule editing requires Firebase.');
+  const { db } = getFirebaseServices();
+  await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'scheduleExceptions', id), {
+    ...input,
+    location: input.location || null,
+  });
+}
+
+export async function deleteScheduleException(id: string, householdId?: string) {
+  if (!usesFirebaseBackend()) throw new Error('Schedule editing requires Firebase.');
+  const { db } = getFirebaseServices();
+  await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'scheduleExceptions', id));
 }
