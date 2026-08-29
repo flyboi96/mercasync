@@ -12,9 +12,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 
 - Seven-day shared schedule and dinner plan
 - Recipe favorites, ratings, notes, and history surface
-- Inventory estimates with confidence levels
-- Separate King Soopers and biweekly Costco lists
-- Durable grocery completion state backed by the household database
+- Shared inventory estimates with confirmation dates and automatic confidence decay
+- Schedule-aware King Soopers and biweekly Costco lists
+- Durable grocery completion that synchronizes both phones and reconciles purchases into inventory
 - Installable mobile web app shell with iPhone safe-area support
 
 The product definition and automation rules live in [`docs/PRODUCT.md`](docs/PRODUCT.md).
@@ -32,7 +32,7 @@ The current D1-backed API also needs `drizzle/0000_rainy_dark_beast.sql` applied
 
 Firebase mode is explicit and emulator-first. It never connects to a production Firebase project unless `NEXT_PUBLIC_FIREBASE_USE_EMULATORS=false` and a real Firebase web-app configuration is supplied.
 
-Requirements: Node 22 or 24 and Java 11 or newer.
+Requirements: Node 22 or 24 and Java 21 or newer.
 
 ```bash
 npm run firebase:emulators

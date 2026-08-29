@@ -37,6 +37,24 @@ households/{householdId}/scheduleExceptions/{exceptionId}
   location
   createdBy
   createdAt
+
+households/{householdId}/inventory/{itemIdAndUnit}
+  itemId
+  name
+  quantity
+  unit
+  confidence
+  lastConfirmedAt
+
+households/{householdId}/groceryRuns/{weekStart}
+  calculationFingerprint
+  items: [calculated need + checked purchase state]
+
+households/{householdId}/inventoryTransactions/{weekAndItem}
+  kind: purchase
+  quantity
+  unit
+  groceryRunId
 ```
 
 Firestore rules authorize reads and writes by checking the signed-in UID against the household's `memberIds`. Clients cannot add themselves to a household or change membership.
@@ -46,6 +64,12 @@ Firestore rules authorize reads and writes by checking the signed-in UID against
 Schedule expansion and dinner adaptation are pure domain rules. The UI supplies a seven-day date range plus persisted exceptions and receives derived daily availability, diner count, effort, servings, and an explanation. This keeps planning deterministic and testable and prevents either Firebase or D1 details from leaking into meal-planning code.
 
 Normal days mean both people are home. Exceptions override that baseline for one person and date. Away and work-trip exceptions remove that diner. Late shifts keep the diner but reduce effort and favor leftovers or fast meals. Home, day-off, and holiday overrides restore normal availability.
+
+## Grocery and inventory reconciliation
+
+The weekly grocery run is a Firestore snapshot of deterministic recipe needs. Refreshing a run replaces pending calculations while preserving completed purchases. Checking an item uses one Firestore transaction to mark the shared item complete, increase the matching inventory estimate, raise confidence to 100%, and record an idempotent purchase transaction. Undo reverses that quantity and removes the ledger entry.
+
+Inventory confidence decays in the pure domain layer by two percentage points per elapsed day, with a 10% floor. Grocery subtraction uses quantity multiplied by effective confidence, so uncertain stock creates a visible shopping delta without a paid background process. Confirming an item resets its timestamp and confidence for both users.
 
 ## Static GitHub Pages deployment
 

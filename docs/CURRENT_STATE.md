@@ -44,9 +44,16 @@ Added after the original audit:
   saved schedule exceptions and are covered by domain tests.
 - A separate `/mercasync/` static PWA build preserves the legacy Vinext/D1 build.
 - GitHub Actions tests and builds pull requests, then deploys `main` to Pages.
-- Recipes, inventory, recurring consumption, grocery calculation, and grocery
-  persistence remain sample or incomplete. Grocery checkmarks in the Pages build
-  last only for the current browser session.
+- Shared recipes, deterministic schedule-aware grocery calculation, grocery-run
+  completion, purchase-to-inventory reconciliation, and inventory confirmation
+  are now backed by Firestore in the Pages build.
+- Grocery completion synchronizes across both signed-in phones. A completed item
+  adds its suggested quantity to inventory and creates a reversible purchase
+  transaction.
+- Inventory confidence decays by two points per day and affects how much stock is
+  subtracted from shopping needs. Confirmation resets confidence to 100%.
+- Recurring consumption, cooked-meal inventory deductions, quantity correction,
+  and scheduled automation remain incomplete.
 
 ## Migration boundary
 
