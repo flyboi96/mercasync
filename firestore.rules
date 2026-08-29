@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function householdData(householdId) {
+      return get(/databases/$(database)/documents/households/$(householdId)).data;
+    }
+
+    function isHouseholdMember(householdId) {
+      return signedIn()
+        && request.auth.uid in householdData(householdId).memberIds;
+    }
+
+    function validPersonId(personId) {
+      return personId == 'alex' || personId == 'nathalia';
+    }
+
+    function validExceptionKind(kind) {
+      return kind == 'home'
+        || kind == 'late_shift'
+        || kind == 'work_trip'
+        || kind == 'day_off'
+        || kind == 'holiday'
+        || kind == 'away';
+    }
+
+    function validScheduleException(data) {
+      return data.keys().hasOnly([
+          'personId', 'kind', 'date', 'title', 'location', 'createdBy', 'createdAt'
+        ])
+        && validPersonId(data.personId)
+        && validExceptionKind(data.kind)
+        && data.date is string
+        && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 120
+        && (data.location == null || data.location is string)
+        && data.createdBy == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    match /households/{householdId} {
+      allow read: if isHouseholdMember(householdId);
+      allow create, update, delete: if false;
+
+      match /members/{memberId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update, delete: if false;
+      }
+
+      match /scheduleExceptions/{exceptionId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if isHouseholdMember(householdId)
+          && validScheduleException(request.resource.data);
+        allow update, delete: if false;
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
