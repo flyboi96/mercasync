@@ -13,8 +13,11 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Seven-day shared schedule and dinner plan
 - Recipe favorites, ratings, notes, and history surface
 - Shared inventory estimates with confirmation dates and automatic confidence decay
+- One-tap inventory corrections with an exact quantity fallback
 - Schedule-aware King Soopers and biweekly Costco lists
 - Durable grocery completion that synchronizes both phones and reconciles purchases into inventory
+- Cooked/skipped meal confirmation with reversible inventory consumption
+- Alex's home breakfast and Nathalia's snacks included only when each person is home
 - Installable mobile web app shell with iPhone safe-area support
 
 The product definition and automation rules live in [`docs/PRODUCT.md`](docs/PRODUCT.md).

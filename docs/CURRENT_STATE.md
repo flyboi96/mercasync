@@ -52,8 +52,13 @@ Added after the original audit:
   transaction.
 - Inventory confidence decays by two points per day and affects how much stock is
   subtracted from shopping needs. Confirmation resets confidence to 100%.
-- Recurring consumption, cooked-meal inventory deductions, quantity correction,
-  and scheduled automation remain incomplete.
+- Inventory quantities can be corrected with quick presets or an exact amount.
+- Recipe-backed lunches and dinners can be marked eaten or skipped. Eaten meals
+  subtract serving-scaled ingredients, while undo restores those deductions.
+- Alex's breakfast and Nathalia's snack profile now contribute to grocery needs
+  only on days each person is home.
+- Recurring-profile editing, adding arbitrary inventory items, and scheduled
+  automation remain incomplete.
 
 ## Migration boundary
 

@@ -55,6 +55,14 @@ households/{householdId}/inventoryTransactions/{weekAndItem}
   quantity
   unit
   groceryRunId
+
+households/{householdId}/mealCompletions/{dateAndMealType}
+  date
+  mealType
+  recipeId
+  servings
+  status: cooked | skipped
+  deductions
 ```
 
 Firestore rules authorize reads and writes by checking the signed-in UID against the household's `memberIds`. Clients cannot add themselves to a household or change membership.
@@ -70,6 +78,12 @@ Normal days mean both people are home. Exceptions override that baseline for one
 The weekly grocery run is a Firestore snapshot of deterministic recipe needs. Refreshing a run replaces pending calculations while preserving completed purchases. Checking an item uses one Firestore transaction to mark the shared item complete, increase the matching inventory estimate, raise confidence to 100%, and record an idempotent purchase transaction. Undo reverses that quantity and removes the ledger entry.
 
 Inventory confidence decays in the pure domain layer by two percentage points per elapsed day, with a 10% floor. Grocery subtraction uses quantity multiplied by effective confidence, so uncertain stock creates a visible shopping delta without a paid background process. Confirming an item resets its timestamp and confidence for both users.
+
+Inventory quantity corrections are shared Firestore updates. The quick controls map to deterministic values (out, half, unchanged, or 50% more), retain an exact numeric fallback, and reset confidence because a person has just inspected the item.
+
+Meal confirmation is stored separately from the generated plan. Marking a recipe-backed lunch or dinner cooked atomically subtracts its serving-scaled ingredients and records confirmed consumption. Marking it skipped preserves inventory; undoing cooked status restores the exact stored deductions.
+
+Recurring consumption is deterministic domain data in this slice: Alex's breakfast and Nathalia's snack profile are multiplied by the number of days each person is home. Schedule exceptions therefore change both recurring grocery quantities and the visible weekly occurrence counts. Profile editing remains a later Firestore migration.
 
 ## Static GitHub Pages deployment
 
