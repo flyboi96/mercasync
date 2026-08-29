@@ -74,6 +74,21 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function validRecurringProfile(data) {
+      return data.keys().hasOnly(['personId', 'name', 'condition', 'enabled', 'ingredients', 'updatedBy', 'updatedAt'])
+        && validPersonId(data.personId)
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 120
+        && data.condition == 'home'
+        && data.enabled is bool
+        && data.ingredients is list
+        && data.ingredients.size() > 0
+        && data.ingredients.size() <= 30
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
     function validRecipe(data) {
       return data.keys().hasOnly([
           'name', 'mealType', 'description', 'cuisine', 'protein', 'method',
@@ -234,6 +249,13 @@ service cloud.firestore {
         allow create, update: if isHouseholdMember(householdId)
           && settingsId == 'current'
           && validPlanningSettings(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /recurringProfiles/{profileId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validRecurringProfile(request.resource.data);
         allow delete: if false;
       }
 

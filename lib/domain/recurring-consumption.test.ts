@@ -13,4 +13,8 @@ describe('recurring consumption', () => {
     const week = buildPlanningWeek([{ id: 'trip', personId: 'alex', kind: 'work_trip', date: '2026-08-31', title: 'Trip' }], friday);
     expect(recurringProfileOccurrences(RECURRING_PROFILES[0], week)).toBe(6);
   });
+
+  it('does not consume a routine that the household paused', () => {
+    expect(recurringProfileOccurrences({ ...RECURRING_PROFILES[0], enabled: false }, buildPlanningWeek([], friday))).toBe(0);
+  });
 });

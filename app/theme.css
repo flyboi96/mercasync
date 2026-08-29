@@ -69,6 +69,23 @@
 .costco-toggle.active { border-color: #0f4c3a66; background: #edf3ed; }
 .costco-toggle strong, .costco-toggle small { display: block; }
 .costco-toggle small { margin-top: 3px; color: var(--muted); }
+.routine-backdrop { place-items: center; }
+.routine-sheet { max-height: calc(100dvh - 40px); overflow-y: auto; }
+.routine-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 16px 0 10px; padding: 4px; border-radius: 12px; background: #e8e8e1; }
+.routine-tabs button { min-height: 44px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-weight: 850; cursor: pointer; }
+.routine-tabs button.active { color: var(--green); background: #fff; box-shadow: 0 2px 8px #26312d12; }
+.routine-enabled { display: flex !important; grid-template-columns: none !important; align-items: center; gap: 11px !important; padding: 13px; border-radius: 12px; background: #edf3ed; text-transform: none !important; }
+.routine-enabled input { flex: none; width: 24px; min-height: 24px; accent-color: var(--green); }
+.routine-enabled strong, .routine-enabled small { display: block; }
+.routine-enabled strong { font-size: 13px; }
+.routine-ingredients { display: grid; gap: 7px; margin: 14px 0; }
+.routine-ingredients > label { display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 12px; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; text-transform: none; background: #fff; }
+.routine-ingredients > label > span:first-child { font-size: 12px; }
+.routine-ingredients small { display: block; margin-top: 2px; }
+.quantity-input { position: relative; }
+.quantity-input input { padding-right: 52px; }
+.quantity-input em { position: absolute; right: 10px; top: 50%; color: var(--muted); font-size: 10px; font-style: normal; transform: translateY(-50%); }
+.add-inventory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .meal-week-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .meal-day { position: relative; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .meal-day.today { border: 2px solid var(--green); }
@@ -321,6 +338,11 @@
   .costco-toggle { min-height: 66px; }
   .costco-toggle strong { font-size: 14px; }
   .costco-toggle small { font-size: 12px; line-height: 1.35; }
+  .routine-backdrop { place-items: end center; padding: 0; }
+  .routine-sheet { width: 100%; max-height: calc(94dvh - env(safe-area-inset-top)); padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
+  .routine-ingredients > label { grid-template-columns: 1fr 130px; padding: 11px; }
+  .routine-ingredients > label > span:first-child { font-size: 14px; }
+  .add-inventory-grid { grid-template-columns: 1fr 1fr; }
   .dinner-target strong { font-size: 19px; }
   .dinner-target small { max-width: 180px; font-size: 13px; line-height: 1.35; }
   .stepper { flex: none; grid-template-columns: 44px 42px 44px; }

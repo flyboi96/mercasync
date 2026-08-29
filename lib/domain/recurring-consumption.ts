@@ -13,6 +13,7 @@ export type RecurringConsumptionProfile = {
   personId: PersonId;
   name: string;
   condition: 'home';
+  enabled?: boolean;
   ingredients: RecurringIngredient[];
 };
 
@@ -37,5 +38,6 @@ export const RECURRING_PROFILES: RecurringConsumptionProfile[] = [
 ];
 
 export function recurringProfileOccurrences(profile: RecurringConsumptionProfile, week: PlanningDay[]) {
+  if (profile.enabled === false) return 0;
   return week.filter((day) => day[profile.personId].isHome).length;
 }
