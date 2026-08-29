@@ -35,6 +35,19 @@ Audited on August 28, 2026 at commit `af6ec9c` (`main`).
 
 Interactive browser QA could not run during the audit because no browser backend was connected. The mobile CSS and rendered runtime were inspected, but physical-device and interactive viewport checks remain required before deployment.
 
+## GitHub Pages deployment update
+
+Added after the original audit:
+
+- Authentication and schedule exceptions use Firebase in the static Pages build.
+- The visible seven-day schedule, dinner servings, and dinner effort derive from
+  saved schedule exceptions and are covered by domain tests.
+- A separate `/mercasync/` static PWA build preserves the legacy Vinext/D1 build.
+- GitHub Actions tests and builds pull requests, then deploys `main` to Pages.
+- Recipes, inventory, recurring consumption, grocery calculation, and grocery
+  persistence remain sample or incomplete. Grocery checkmarks in the Pages build
+  last only for the current browser session.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.

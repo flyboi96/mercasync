@@ -4,7 +4,7 @@ Alex and Nathalia’s shared household planner for schedules, recipes, inventory
 
 ## Open the app
 
-### [Launch MercaSync](https://alex-nathalia-at-home.corbin-xela.chatgpt.site)
+### [Launch MercaSync](https://flyboi96.github.io/mercasync/)
 
 The app is designed mobile-first and can be installed on an iPhone from Safari using **Share → Add to Home Screen**. No App Store purchase or subscription is required.
 
@@ -46,3 +46,20 @@ The local seed creates only emulator data and prints credentials for the two loc
 Copy `.env.example` to `.env.local` when you need to override the defaults. Firebase web configuration may be exposed to the browser, but service-account keys and administrative credentials must never be placed in `NEXT_PUBLIC_*` variables or committed.
 
 See [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) for the audited functionality boundary and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for migration decisions.
+
+## GitHub Pages deployment
+
+The public repository deploys a static Firebase client to GitHub Pages. The
+legacy Vinext/Sites/D1 build remains available while the remaining data
+features migrate.
+
+Before the first deployment:
+
+1. In the GitHub repository, set **Settings → Pages → Source** to **GitHub Actions**.
+2. Add the five `NEXT_PUBLIC_FIREBASE_*` values listed in `.env.example` as
+   repository **Actions variables** under **Settings → Secrets and variables → Actions**.
+3. In Firebase Authentication, add `flyboi96.github.io` to **Authorized domains**.
+
+Pushes to `main` then test, build, and deploy `dist-pages`. Pull requests run
+the same checks without publishing. Build locally with `npm run build:pages`
+and preview the exact static output with `npm run preview:pages`.

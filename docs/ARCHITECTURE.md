@@ -47,6 +47,21 @@ Schedule expansion and dinner adaptation are pure domain rules. The UI supplies 
 
 Normal days mean both people are home. Exceptions override that baseline for one person and date. Away and work-trip exceptions remove that diner. Late shifts keep the diner but reduce effort and favor leftovers or fast meals. Home, day-off, and holiday overrides restore normal availability.
 
-## Deferred hosting decision
+## Static GitHub Pages deployment
 
-Firebase deployment is deliberately deferred until local Auth and Firestore workflows pass. The current app uses Vinext and Cloudflare-specific build plugins. Firebase's current guidance recommends App Hosting for full-stack Next.js applications, while classic Hosting is best suited to static assets unless dynamic work is delegated. Before adding GitHub Actions, the application must either have a verified static Firebase Hosting build or adopt a supported full-stack Firebase target. No current Sites deployment is removed while that decision is validated.
+GitHub Pages is the no-billing production target. The deployed PWA is a
+client-only React build that communicates directly with Firebase Authentication
+and Cloud Firestore. Firestore rules, not repository visibility or client-side
+route guards, enforce household authorization.
+
+The Pages build is intentionally separate from the legacy Vinext/Sites build:
+
+- `npm run build` continues to produce the existing Cloudflare-compatible app.
+- `npm run build:pages` produces static files under `/mercasync/`.
+- The Pages build always selects Firebase and refuses to build without a real
+  Firebase web configuration.
+- No service-account key, Admin SDK credential, account email, password, or UID
+  belongs in the client build or GitHub configuration.
+
+The D1 API and Sites configuration remain in the repository until all durable
+features have a verified Firestore replacement and migration path.
