@@ -10,6 +10,7 @@ import {
 import { saveMealPlan, subscribeToSavedMealPlan } from '@/lib/data/meal-plan-repository';
 import { subscribeToRecipes, updateRecipePreferences } from '@/lib/data/recipe-repository';
 import { mealPlanFingerprint } from '@/lib/domain/meal-plan';
+import { buildGroceryNeeds, formatGroceryQuantity } from '@/lib/domain/grocery';
 import { STARTER_RECIPES, type MealType, type Recipe } from '@/lib/domain/recipe';
 import {
   buildPlanningWeek,
@@ -28,7 +29,7 @@ import { usesFirebaseBackend } from '@/lib/firebase/client';
 import { APP_VERSION } from '@/lib/version';
 
 type Grocery = { id: string; name: string; detail: string; store: 'King Soopers' | 'Costco'; checked: boolean };
-type Inventory = { name: string; qty: string; confidence: number };
+type Inventory = { itemId: string; name: string; qty: string; quantity: number; unit: string; confidence: number };
 const fallbackGroceries: Grocery[] = [
   { id: 'salmon', name: 'Wild salmon', detail: '1 lb · Miso bowls', store: 'King Soopers', checked: false },
   { id: 'spinach', name: 'Baby spinach', detail: '1 bag · Orzo + breakfast', store: 'King Soopers', checked: false },
@@ -37,14 +38,17 @@ const fallbackGroceries: Grocery[] = [
   { id: 'chicken', name: 'Chicken breast', detail: '6 lb · Refill freezer staple', store: 'Costco', checked: false },
 ];
 const fallbackInventory: Inventory[] = [
-  { name: 'Jasmine rice', qty: '4.2 lb', confidence: 92 }, { name: 'Eggs', qty: '8', confidence: 78 },
-  { name: 'Greek yogurt', qty: '~1 cup', confidence: 34 }, { name: 'Frozen berries', qty: '~3 cups', confidence: 66 },
+  { itemId: 'jasmine-rice', name: 'Jasmine rice', qty: '4.2 lb', quantity: 10.5, unit: 'cup', confidence: 92 },
+  { itemId: 'eggs', name: 'Eggs', qty: '8', quantity: 8, unit: 'each', confidence: 78 },
+  { itemId: 'greek-yogurt', name: 'Greek yogurt', qty: '~1 cup', quantity: 1, unit: 'cup', confidence: 34 },
+  { itemId: 'frozen-berries', name: 'Frozen berries', qty: '~3 cups', quantity: 3, unit: 'cup', confidence: 66 },
 ];
 const nav = [{ label: 'Plan', icon: '⌂' }, { label: 'Calendar', icon: '□' }, { label: 'Recipes', icon: '◇' }, { label: 'Inventory', icon: '◫' }, { label: 'Groceries', icon: '✓' }];
 
 export default function Home() {
   const [active, setActive] = useState('Plan');
   const [items, setItems] = useState<Grocery[]>(fallbackGroceries);
+  const [checkedGroceryIds, setCheckedGroceryIds] = useState<Set<string>>(() => new Set());
   const [inventory, setInventory] = useState<Inventory[]>(fallbackInventory);
   const [recipeItems, setRecipeItems] = useState<Recipe[]>(STARTER_RECIPES);
   const [events, setEvents] = useState<ScheduleException[]>([]);
@@ -55,7 +59,26 @@ export default function Home() {
   const auth = useHouseholdSession();
   const firebaseEnabled = usesFirebaseBackend();
   const week = useMemo(() => buildPlanningWeek(events), [events]);
-  const remaining = useMemo(() => items.filter((item) => !item.checked).length, [items]);
+  const calculatedNeeds = useMemo(() => buildGroceryNeeds(week, recipeItems, inventory), [inventory, recipeItems, week]);
+  const displayItems = useMemo(() => {
+    if (!firebaseEnabled) return items;
+    return calculatedNeeds.map((need) => {
+      const recipeSummary = need.sources.length <= 2
+        ? need.sources.join(' + ')
+        : `${need.sources.slice(0, 2).join(' + ')} + ${need.sources.length - 2} more`;
+      const inventorySummary = need.inventoryUsed > 0
+        ? ` · ${formatGroceryQuantity(need.inventoryUsed, need.unit)} on hand used`
+        : '';
+      return {
+        id: need.id,
+        name: need.name,
+        detail: `${formatGroceryQuantity(need.quantity, need.unit)} · ${recipeSummary}${inventorySummary}`,
+        store: need.store,
+        checked: checkedGroceryIds.has(need.id),
+      };
+    });
+  }, [calculatedNeeds, checkedGroceryIds, firebaseEnabled, items]);
+  const remaining = useMemo(() => displayItems.filter((item) => !item.checked).length, [displayItems]);
   const currentPlanFingerprint = useMemo(() => mealPlanFingerprint(week), [week]);
   const planIsSaved = savedPlanFingerprint === currentPlanFingerprint;
   const notify = useCallback((message: string) => {
@@ -102,13 +125,18 @@ export default function Home() {
     finally { setSavingPlan(false); }
   };
   const toggleItem = async (id: string) => {
-    const current = items.find((item) => item.id === id); if (!current) return;
+    const current = displayItems.find((item) => item.id === id); if (!current) return;
     const checked = !current.checked;
-    setItems((all) => all.map((item) => item.id === id ? { ...item, checked } : item));
     if (firebaseEnabled) {
-      notify('Updated for this session. Shared grocery sync is not migrated yet.');
+      setCheckedGroceryIds((existing) => {
+        const next = new Set(existing);
+        if (checked) next.add(id); else next.delete(id);
+        return next;
+      });
+      notify('Checked for this session. Shared purchase sync is next.');
       return;
     }
+    setItems((all) => all.map((item) => item.id === id ? { ...item, checked } : item));
     try {
       const response = await fetch('/api/home', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, checked }) });
       if (!response.ok) throw new Error('save failed');
@@ -125,11 +153,11 @@ export default function Home() {
     <section className="content">
       <header className="mobile-header"><div className="brand"><span className="brand-mark">M</span><span>MercaSync</span><small className="version-badge">v{APP_VERSION}</small></div><div className="mobile-people"><span className="avatar alex">A</span><span className="avatar nathalia">N</span></div></header>
       <header className="topbar"><div><p className="eyebrow">{formatLongDate()}</p><h1>{title}</h1><p>{active === 'Plan' ? 'Lunch and dinner, balanced around who’s home.' : 'Shared, current, and ready for both of you.'}</p></div>{active === 'Plan' && <button className={planIsSaved ? 'primary-button saved' : 'primary-button'} onClick={persistPlan} disabled={savingPlan || planIsSaved}><span>{planIsSaved ? '✓' : '↑'}</span> {savingPlan ? 'Saving…' : planIsSaved ? 'Plan saved' : savedPlanFingerprint ? 'Save update' : 'Save plan'}</button>}</header>
-      {active === 'Plan' && <PlanView items={items} inventory={inventory} week={week} open={setActive} />}
+      {active === 'Plan' && <PlanView items={displayItems} inventory={inventory} week={week} open={setActive} />}
       {active === 'Calendar' && <CalendarView events={events} week={week} householdId={auth.session?.householdId} onChanged={(changed) => setEvents((current) => [...current.filter((event) => event.id !== changed.id), changed].sort((a, b) => a.date.localeCompare(b.date)))} onDeleted={(id) => setEvents((current) => current.filter((event) => event.id !== id))} notify={notify} />}
       {active === 'Recipes' && <RecipesView recipes={recipeItems} householdId={auth.session?.householdId} onUpdated={(updated) => setRecipeItems((current) => current.map((recipe) => recipe.id === updated.id ? updated : recipe))} notify={notify} />}
       {active === 'Inventory' && <InventoryView inventory={inventory} notify={notify} />}
-      {active === 'Groceries' && <GroceriesView items={items} store={store} setStore={setStore} toggle={toggleItem} />}
+      {active === 'Groceries' && <GroceriesView items={displayItems} store={store} setStore={setStore} toggle={toggleItem} />}
     </section>
     <nav className="bottom-nav" aria-label="Mobile navigation">{nav.map((item) => <button key={item.label} className={active === item.label ? 'active' : ''} onClick={() => setActive(item.label)}><span>{item.icon}</span><small>{item.label === 'Groceries' ? 'List' : item.label}</small>{item.label === 'Groceries' && remaining > 0 && <em>{remaining}</em>}</button>)}</nav>
     {toast && <div className="toast" role="status">✓ {toast}</div>}
@@ -253,4 +281,13 @@ function RecipesView({ recipes, householdId, onUpdated, notify }: { recipes: Rec
   </section>;
 }
 function InventoryView({ inventory, notify }: { inventory: Inventory[]; notify: (message: string) => void }) { return <section className="inventory-page"><div className="confidence-key"><span className="pulse" />Confidence falls gradually when planned meals aren’t confirmed.</div>{inventory.map(item => <article className="inventory-card" key={item.name}><div><strong>{item.name}</strong><small>{item.qty}</small></div><div className="confidence"><span style={{ width: `${item.confidence}%` }} /><small>{item.confidence}% sure</small></div><button onClick={() => notify(`${item.name} confirmed.`)}>Confirm</button></article>)}<button className="add-button" onClick={() => notify('Inventory editing is next in development.')}>＋ Add an item</button></section>; }
-function GroceriesView({ items, store, setStore, toggle }: { items: Grocery[]; store: 'King Soopers' | 'Costco'; setStore: (store: 'King Soopers' | 'Costco') => void; toggle: (id: string) => void }) { const visible = items.filter(item => item.store === store); return <section className="groceries-page"><div className="store-tabs"><button className={store === 'King Soopers' ? 'active' : ''} onClick={() => setStore('King Soopers')}>King Soopers <span>{items.filter(i => i.store === 'King Soopers' && !i.checked).length}</span></button><button className={store === 'Costco' ? 'active' : ''} onClick={() => setStore('Costco')}>Costco <span>{items.filter(i => i.store === 'Costco' && !i.checked).length}</span></button></div><div className="list-summary"><div><p className="eyebrow">{store === 'Costco' ? 'BIWEEKLY · SEP 1–3' : 'WEEKLY · SATURDAY'}</p><h2>{store}</h2></div><p>{visible.filter(i => !i.checked).length} left</p></div><div className="shopping-list">{visible.map(item => <button className={item.checked ? 'shopping-item checked' : 'shopping-item'} key={item.id} onClick={() => toggle(item.id)}><span className="big-check">✓</span><span><strong>{item.name}</strong><small>{item.detail}</small></span></button>)}</div><div className="auto-note"><span className="pulse" /><p><strong>Built automatically</strong><br/>Recipes + routines − estimated inventory</p></div></section>; }
+function GroceriesView({ items, store, setStore, toggle }: { items: Grocery[]; store: 'King Soopers' | 'Costco'; setStore: (store: 'King Soopers' | 'Costco') => void; toggle: (id: string) => void }) {
+  const visible = items.filter((item) => item.store === store);
+  const remaining = visible.filter((item) => !item.checked).length;
+  return <section className="groceries-page">
+    <div className="store-tabs"><button className={store === 'King Soopers' ? 'active' : ''} onClick={() => setStore('King Soopers')}>King Soopers <span>{items.filter((item) => item.store === 'King Soopers' && !item.checked).length}</span></button><button className={store === 'Costco' ? 'active' : ''} onClick={() => setStore('Costco')}>Costco <span>{items.filter((item) => item.store === 'Costco' && !item.checked).length}</span></button></div>
+    <div className="list-summary"><div><p className="eyebrow">{store === 'Costco' ? 'BIWEEKLY · TUE–THU' : 'WEEKLY · WEEKEND'}</p><h2>{store}</h2></div><p>{remaining} left</p></div>
+    {visible.length > 0 ? <div className="shopping-list">{visible.map((item) => <button className={item.checked ? 'shopping-item checked' : 'shopping-item'} key={item.id} onClick={() => toggle(item.id)}><span className="big-check">✓</span><span><strong>{item.name}</strong><small>{item.detail}</small></span></button>)}</div> : <div className="empty-groceries"><strong>Nothing needed here</strong><p>This week’s recipes are covered by the other store or estimated inventory.</p></div>}
+    <div className="auto-note"><span className="pulse" /><p><strong>Calculated from this week</strong><br/>Schedule-aware recipe servings − compatible estimated inventory</p></div>
+  </section>;
+}
