@@ -19,6 +19,10 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Shared biweekly Costco switch that routes immediate needs to King Soopers on off weeks
 - Bulk-aware store optimization using projected demand, real package sizes, shelf life, and freezer suitability
 - Household recurring recipes and grocery items with editable amounts, preferred stores, and times-per-week frequency
+- Previous/current/next week navigation shared across Plan, Calendar, and Groceries
+- Lunch and dinner overrides with recipe, leftovers, eating-out, skip, and serving controls
+- Full recipe editing and deletion from the shared recipe detail view
+- Per-week grocery quantity corrections and removal that survive automatic recalculation
 - Real inventory creation for foods already at home
 - Tap any dinner in Plan or Calendar to cook another recipe, use leftovers, eat out, or skip it; servings and groceries update together
 - Add shared recipes with ingredients, steps, serving size, and an explicit Costco preference for durable bulk ingredients

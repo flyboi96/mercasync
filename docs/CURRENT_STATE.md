@@ -99,6 +99,14 @@ Added after the original audit:
 - Recurring requirements flow through inventory subtraction and store optimization. They do not silently occupy dated lunch or dinner slots.
 - On first use, existing person-based profile ingredients are copied into the new recurring-food collection as editable household items. Legacy documents remain untouched as a recovery path but no longer drive grocery calculations.
 
+## Version 0.16 multi-week control update
+
+- Plan, Calendar, and Groceries share an explicit previous/current/next week navigator. Each selected week uses its own saved meal plan, grocery run, meal overrides, and shopping-trip identifiers.
+- Lunches are directly editable from the meal calendar using the same recipe, leftovers, eating-out, skip, and servings workflow as dinners.
+- Meal overrides now identify a meal slot. Existing date-only override documents remain compatible and continue to mean dinner.
+- Full recipe contents can be edited after creation, and recipes can be deleted from their detail view.
+- Grocery quantities can be corrected for the selected week, and irrelevant items can be removed. Corrections become explicit manual choices so automatic recalculation preserves them.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.
