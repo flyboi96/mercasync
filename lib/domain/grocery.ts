@@ -1,7 +1,7 @@
 import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
 import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
-import { RECURRING_PROFILES, recurringProfileOccurrences } from './recurring-consumption';
+import { RECURRING_PROFILES, recurringProfileOccurrences, type RecurringConsumptionProfile } from './recurring-consumption';
 
 export type GroceryNeed = {
   id: string;
@@ -47,6 +47,7 @@ export function buildGroceryNeeds(
   recipes: Recipe[],
   inventory: InventoryItem[] = [],
   now = new Date(),
+  recurringProfiles: RecurringConsumptionProfile[] = RECURRING_PROFILES,
 ): GroceryNeed[] {
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const requirements = new Map<string, GroceryNeed & { required: number }>();
@@ -78,7 +79,7 @@ export function buildGroceryNeeds(
     }
   }
 
-  for (const profile of RECURRING_PROFILES) {
+  for (const profile of recurringProfiles) {
     const occurrences = recurringProfileOccurrences(profile, week);
     for (const ingredient of profile.ingredients) addRequirement(ingredient, occurrences, profile.name);
   }
