@@ -18,8 +18,20 @@ createRoot(root).render(
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
-      // The app remains usable online if offline caching cannot initialize.
-    });
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+    if (hadController) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        window.location.reload();
+      });
+    }
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js`)
+      .then((registration) => registration.update())
+      .catch(() => {
+        // The app remains usable online if offline caching cannot initialize.
+      });
   });
 }

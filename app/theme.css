@@ -1,7 +1,7 @@
 /* MercaSync identity: market green, tomato coral, saffron, and warm cream. */
 :root {
   --ink: #18302a;
-  --muted: #6f7d76;
+  --muted: #56655e;
   --line: #dfded4;
   --green: #0f4c3a;
   --coral: #e5654f;
@@ -125,4 +125,125 @@
   .meal-calendar-row { grid-template-columns: 42px 1fr; gap: 8px; }
   .meal-calendar-row .schedule-date { grid-row: 1 / 3; align-self: center; }
   .meal-slot { grid-column: 2; min-height: 58px; }
+}
+
+/* Phone UX: readable at arm's length, thumb-sized, and vertically scannable. */
+@media (max-width: 720px) {
+  body { font-size: 16px; line-height: 1.45; }
+  .content { padding: 0 16px 32px; }
+  .mobile-header { min-height: 76px; height: 76px; }
+  .mobile-header .brand { flex: 1; gap: 10px; font-size: 20px; }
+  .mobile-header .brand-mark { width: 40px; height: 40px; font-size: 16px; }
+  .version-badge { margin-left: 2px; padding: 7px 10px; color: #fff; background: var(--green); font-size: 13px; letter-spacing: .02em; }
+  .avatar { width: 36px; height: 36px; font-size: 12px; }
+  .mini-avatar { width: 26px; height: 26px; font-size: 11px; }
+
+  .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; margin: 8px 0 22px; }
+  .topbar h1 { margin-top: 4px; font-size: 34px; }
+  .topbar > div > p:last-child { max-width: 250px; font-size: 14px; line-height: 1.45; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; }
+  .primary-button { width: auto; min-height: 48px; padding: 0 14px; font-size: 13px; white-space: nowrap; }
+  .primary-button span { font-size: 15px; }
+
+  .today-card { align-items: flex-start; padding: 22px 18px; }
+  .today-card h2 { font-size: 25px; line-height: 1.2; }
+  .today-card p:last-child { font-size: 13px; line-height: 1.45; }
+  .today-card button { min-height: 48px; padding: 0 13px; font-size: 12px; }
+
+  .section-heading { align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+  .section-heading h2 { font-size: 23px; }
+  .section-heading p { margin-top: 6px; font-size: 13px; line-height: 1.45; }
+  .text-button { min-width: 70px; font-size: 13px; }
+  .week-grid { grid-template-columns: 1fr; gap: 10px; margin-right: 0; overflow: visible; padding-bottom: 0; scroll-snap-type: none; }
+  .day-card { display: grid; grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr); gap: 10px; min-height: 0; padding: 14px; scroll-snap-align: none; }
+  .date { grid-row: 1 / 3; flex-direction: column; justify-content: flex-start; align-items: center; gap: 2px; margin: 0; padding: 5px 8px 0 0; border-right: 1px solid var(--line); }
+  .date span { font-size: 13px; }
+  .date strong { font-size: 29px; }
+  .availability { gap: 7px; margin: 0; }
+  .availability p { font-size: 13px; }
+  .meal { grid-column: 2 / -1; min-height: 76px; margin: 0; padding: 12px; }
+  .meal small, .schedule-meal small { font-size: 12px; letter-spacing: .06em; }
+  .meal strong { font-size: 16px; line-height: 1.3; }
+  .meal-meta { font-size: 12px; line-height: 1.3; }
+
+  .dashboard-grid { gap: 12px; margin-top: 18px; }
+  .panel { padding: 19px; }
+  .panel h2, .list-summary h2 { font-size: 23px; }
+  .panel-copy { font-size: 14px; line-height: 1.55; }
+  .panel-link { font-size: 13px; }
+  .routine { grid-template-columns: 42px 1fr auto; gap: 9px; padding: 14px 0; }
+  .routine strong { font-size: 14px; }
+  .routine p { font-size: 12px; }
+  .routine em { padding: 7px 8px; font-size: 12px; }
+
+  .calendar-switch button { min-height: 50px; font-size: 14px; }
+  .calendar-actions { align-items: stretch; flex-direction: column; gap: 14px; }
+  .calendar-actions h2 { font-size: 25px; }
+  .calendar-actions p:last-child { max-width: none; font-size: 13px; line-height: 1.5; }
+  .add-schedule { width: 100%; min-height: 50px; font-size: 14px; }
+  .event-strip { grid-template-columns: 1fr; }
+  .event-strip article { padding: 15px; }
+  .event-strip strong { font-size: 16px; }
+  .event-strip small { font-size: 12px; line-height: 1.4; }
+  .event-actions button { flex: 1; min-height: 46px; font-size: 13px; }
+  .schedule-row, .schedule-row.work-only { grid-template-columns: 52px 1fr; gap: 12px; padding: 15px 13px; }
+  .schedule-date strong { font-size: 29px; }
+  .schedule-date span { font-size: 13px; }
+  .schedule-people { gap: 12px; }
+  .schedule-people p { grid-template-columns: 28px 1fr; column-gap: 8px; }
+  .schedule-people strong { font-size: 14px; }
+  .schedule-people small { font-size: 13px; line-height: 1.35; }
+  .meal-calendar-row { grid-template-columns: 48px 1fr; gap: 10px; padding: 15px 13px; }
+  .meal-slot { min-height: 72px; padding: 13px; }
+  .meal-slot small { font-size: 12px; line-height: 1.35; }
+  .meal-slot strong { font-size: 16px; line-height: 1.3; }
+  .shopping-chip { top: -9px; padding: 6px 9px; font-size: 12px; }
+  .date-picks button { min-height: 46px; font-size: 13px; }
+  .schedule-sheet label { font-size: 12px; }
+  .sheet-note { font-size: 12px; }
+
+  .recipe-swatch span { font-size: 12px; }
+  .recipe-body { padding: 18px; }
+  .recipe-body h2 { font-size: 23px; }
+  .recipe-body > p:not(.stars), .recipe-body small { font-size: 14px; line-height: 1.5; }
+  .recipe-body > button { min-height: 48px; font-size: 13px; }
+  .stars { font-size: 14px; }
+  .confidence-key, .auto-note { font-size: 13px; line-height: 1.45; }
+  .inventory-card { grid-template-columns: 1fr 110px; gap: 14px; padding: 16px; }
+  .inventory-card strong { font-size: 16px; }
+  .inventory-card small { font-size: 13px; }
+  .inventory-card > button, .add-button { min-height: 48px; font-size: 13px; }
+  .store-tabs button { min-height: 50px; font-size: 14px; }
+  .store-tabs span { width: 24px; height: 24px; font-size: 12px; }
+  .list-summary p:last-child { font-size: 13px; }
+  .shopping-item { min-height: 78px; padding: 14px 15px; }
+  .big-check { width: 32px; height: 32px; }
+  .shopping-item strong { font-size: 16px; }
+  .shopping-item small { font-size: 13px; line-height: 1.4; }
+  .auto-note p { font-size: 13px; }
+
+  .bottom-nav { padding-top: 7px; }
+  .bottom-nav button { min-height: 58px; }
+  .bottom-nav button > span { height: 23px; font-size: 21px; }
+  .bottom-nav small { font-size: 12px; }
+  .bottom-nav em { width: 21px; height: 21px; font-size: 11px; }
+  .toast { padding: 14px 18px; font-size: 14px; line-height: 1.4; }
+
+  .auth-card { padding: 24px 20px; }
+  .auth-card .brand { font-size: 20px; }
+  .auth-card h1 { font-size: 34px; }
+  .auth-card > p:not(.eyebrow):not(.auth-error) { font-size: 15px; }
+  .auth-card label { font-size: 12px; }
+  .auth-error { font-size: 14px; }
+}
+
+@media (max-width: 370px) {
+  .topbar { grid-template-columns: 1fr; }
+  .primary-button { width: 100%; }
+  .today-card { flex-direction: column; }
+  .today-card button { width: 100%; }
+}
+
+@media (max-width: 720px) and (display-mode: standalone) {
+  .mobile-header { height: calc(76px + env(safe-area-inset-top)); }
 }
