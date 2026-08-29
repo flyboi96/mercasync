@@ -61,6 +61,46 @@ service cloud.firestore {
         && data.savedAt == request.time;
     }
 
+    function validRecipe(data) {
+      return data.keys().hasOnly([
+          'name', 'mealType', 'description', 'cuisine', 'protein', 'method',
+          'effortMinutes', 'servings', 'lateNightSuitable', 'tags',
+          'ingredients', 'instructions', 'favorite', 'rating', 'note', 'color',
+          'createdBy', 'createdAt', 'updatedBy', 'updatedAt'
+        ])
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 120
+        && (data.mealType == 'lunch' || data.mealType == 'dinner')
+        && data.description is string
+        && data.cuisine is string
+        && data.protein is string
+        && data.method is string
+        && data.effortMinutes is int
+        && data.effortMinutes >= 1
+        && data.effortMinutes <= 180
+        && data.servings is int
+        && data.servings >= 1
+        && data.servings <= 12
+        && data.lateNightSuitable is bool
+        && data.tags is list
+        && data.ingredients is list
+        && data.ingredients.size() > 0
+        && data.instructions is list
+        && data.instructions.size() > 0
+        && data.favorite is bool
+        && data.rating is int
+        && data.rating >= 0
+        && data.rating <= 5
+        && data.note is string
+        && data.note.size() <= 500
+        && data.color is string
+        && data.createdBy is string
+        && data.createdAt is timestamp
+        && data.updatedBy is string
+        && data.updatedAt is timestamp;
+    }
+
     match /households/{householdId} {
       allow read: if isHouseholdMember(householdId);
       allow create, update, delete: if false;
@@ -86,6 +126,24 @@ service cloud.firestore {
         allow create, update: if isHouseholdMember(householdId)
           && validMealPlan(request.resource.data)
           && request.resource.data.weekStart == weekStart;
+        allow delete: if false;
+      }
+
+      match /recipes/{recipeId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if isHouseholdMember(householdId)
+          && validRecipe(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isHouseholdMember(householdId)
+          && validRecipe(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'favorite', 'rating', 'note', 'updatedBy', 'updatedAt'
+          ])
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
         allow delete: if false;
       }
 
