@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mercasync-pages-v6';
+const CACHE_NAME = 'mercasync-pages-v7';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

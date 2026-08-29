@@ -110,6 +110,10 @@
 .auth-card label { display: grid; gap: 7px; margin: 14px 0; color: var(--ink); font-size: 10px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
 .auth-card input { width: 100%; min-height: 50px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: #fff; font-size: 16px; }
 .auth-card input:focus { outline: 3px solid #f2c14e55; border-color: var(--saffron); }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 76px; }
+.password-field button { position: absolute; inset: 3px 3px 3px auto; min-width: 66px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 9px; color: var(--green); background: var(--cream); font-size: 14px; font-weight: 850; cursor: pointer; }
+.password-field button:focus-visible { outline: 3px solid #f2c14e88; outline-offset: 1px; }
 .auth-card > button { width: 100%; min-height: 50px; margin-top: 8px; border: 0; border-radius: 12px; color: #fff; background: var(--green); font-weight: 850; cursor: pointer; }
 .auth-card > button:disabled { opacity: .65; cursor: wait; }
 .auth-error { padding: 10px 12px; border-radius: 9px; color: #7a3026; background: #e5654f1f; font-size: 11px; line-height: 1.4; }
