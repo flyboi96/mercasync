@@ -71,7 +71,7 @@ households/{householdId}/planningSettings/current
   updatedBy
   updatedAt
 
-households/{householdId}/recurringProfiles/{profileId}
+households/{householdId}/recurringFoods/{foodId}
   personId: alex | nathalia
   name
   enabled
@@ -103,7 +103,7 @@ Inventory quantity corrections are shared Firestore updates. The quick controls 
 
 Meal confirmation is stored separately from the generated plan. Marking a recipe-backed lunch or dinner cooked atomically subtracts its serving-scaled ingredients and records confirmed consumption. Marking it skipped preserves inventory; undoing cooked status restores the exact stored deductions.
 
-Recurring consumption is shared Firestore data: Alex's breakfast and Nathalia's snack profile quantities are multiplied by the number of days each person is home. Each routine can be paused or edited, and schedule exceptions therefore change both recurring grocery quantities and visible weekly occurrence counts.
+Recurring consumption is shared Firestore data independent of a specific household member. Each record represents either one grocery item or one shared recipe, with an editable weekly frequency. Grocery calculations multiply the item amount or recipe servings by that frequency, then subtract estimated inventory and apply store policy. Legacy person-specific profiles are read once for a non-destructive migration and no longer drive calculations afterward.
 
 ## Static GitHub Pages deployment
 

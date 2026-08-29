@@ -91,6 +91,14 @@ Added after the original audit:
 - King Soopers and Costco have editable trip dates. The chosen dates appear on both the work calendar and meal calendar.
 - Costco routing considers bulk package size, shelf life, freezer suitability, and explicit household preference. Produce defaults to King Soopers; Costco-preferred durable staples such as Greek yogurt can qualify at lower projected package utilization.
 
+## Version 0.15 recurring food redesign
+
+- Recurring food is household-level rather than assigned to Alex or Nathalia.
+- Each recurrence is either a standalone grocery item or an existing shared recipe, with an explicit zero-to-21-times-per-week frequency.
+- Item recurrences expose editable amount, unit, and preferred store. Recipe recurrences expose servings per occurrence.
+- Recurring requirements flow through inventory subtraction and store optimization. They do not silently occupy dated lunch or dinner slots.
+- On first use, existing person-based profile ingredients are copied into the new recurring-food collection as editable household items. Legacy documents remain untouched as a recovery path but no longer drive grocery calculations.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.

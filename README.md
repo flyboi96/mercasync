@@ -18,7 +18,7 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Approved meal plans stay stable while shopping; schedule or preference changes intentionally reopen planning
 - Shared biweekly Costco switch that routes immediate needs to King Soopers on off weeks
 - Bulk-aware store optimization using projected demand, real package sizes, shelf life, and freezer suitability
-- Shared editing for Alex's breakfast and Nathalia's snack quantities, including pause controls
+- Household recurring recipes and grocery items with editable amounts, preferred stores, and times-per-week frequency
 - Real inventory creation for foods already at home
 - Tap any dinner in Plan or Calendar to cook another recipe, use leftovers, eat out, or skip it; servings and groceries update together
 - Add shared recipes with ingredients, steps, serving size, and an explicit Costco preference for durable bulk ingredients
