@@ -83,6 +83,14 @@ Added after the original audit:
 - Alex's home breakfast and Nathalia's snacks now load from shared Firestore profiles. Either routine can be paused, and each ingredient's per-home-day amount is editable from the Plan screen.
 - The Inventory screen can create arbitrary shared items with a quantity and unit. New observations begin at 100% confidence and immediately participate in grocery subtraction when their normalized item and unit match a requirement.
 
+## Version 0.14 practical planning update
+
+- Every dinner is actionable from both Plan and the meal calendar. A household member can choose another shared recipe, leftovers, eating out, or no dinner, and can override servings. The durable choice invalidates the saved plan and recalculates groceries.
+- Recipe details are available directly inside the meal action sheet. The recipe library can create shared lunch or dinner recipes with ingredients, instructions, timing, servings, and per-ingredient store preference.
+- The grocery list accepts durable manual items and lets either person move an item between stores. Manual choices survive automatic list recalculation.
+- King Soopers and Costco have editable trip dates. The chosen dates appear on both the work calendar and meal calendar.
+- Costco routing considers bulk package size, shelf life, freezer suitability, and explicit household preference. Produce defaults to King Soopers; Costco-preferred durable staples such as Greek yogurt can qualify at lower projected package utilization.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.

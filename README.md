@@ -20,6 +20,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Bulk-aware store optimization using projected demand, real package sizes, shelf life, and freezer suitability
 - Shared editing for Alex's breakfast and Nathalia's snack quantities, including pause controls
 - Real inventory creation for foods already at home
+- Tap any dinner in Plan or Calendar to cook another recipe, use leftovers, eat out, or skip it; servings and groceries update together
+- Add shared recipes with ingredients, steps, serving size, and an explicit Costco preference for durable bulk ingredients
+- Add off-plan grocery items, move any item between stores, and choose exact King Soopers and Costco dates shown on both calendars
 - Recipe favorites, ratings, notes, and history surface
 - Shared inventory estimates with confirmation dates and automatic confidence decay
 - One-tap inventory corrections with an exact quantity fallback
