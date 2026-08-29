@@ -1,11 +1,6 @@
 import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
-
-export type InventoryEstimate = {
-  itemId: string;
-  quantity: number;
-  unit: string;
-};
+import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
 
 export type GroceryNeed = {
   id: string;
@@ -18,6 +13,12 @@ export type GroceryNeed = {
   sources: string[];
 };
 
+export type GroceryRunItem = GroceryNeed & {
+  checked: boolean;
+  purchasedQuantity: number;
+  purchasedAt: string | null;
+};
+
 const storeNames = {
   king_soopers: 'King Soopers',
   costco: 'Costco',
@@ -27,10 +28,24 @@ function rounded(quantity: number) {
   return Math.round(quantity * 100) / 100;
 }
 
+export function groceryNeedsFingerprint(needs: GroceryNeed[]) {
+  return JSON.stringify(needs.map(({ id, quantity, inventoryUsed, sources }) => ({ id, quantity, inventoryUsed, sources })));
+}
+
+export function mergeGroceryRunItems(needs: GroceryNeed[], existing: GroceryRunItem[]) {
+  const checked = existing.filter((item) => item.checked);
+  const checkedIds = new Set(checked.map((item) => item.id));
+  const pending = needs
+    .filter((need) => !checkedIds.has(need.id))
+    .map((need) => ({ ...need, checked: false, purchasedQuantity: 0, purchasedAt: null }));
+  return [...pending, ...checked].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
+}
+
 export function buildGroceryNeeds(
   week: PlanningDay[],
   recipes: Recipe[],
-  inventory: InventoryEstimate[] = [],
+  inventory: InventoryItem[] = [],
+  now = new Date(),
 ): GroceryNeed[] {
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const requirements = new Map<string, GroceryNeed & { required: number }>();
@@ -66,7 +81,7 @@ export function buildGroceryNeeds(
   }
 
   const inventoryRemaining = new Map(
-    inventory.map((item) => [`${item.itemId}:${item.unit}`, item.quantity]),
+    inventory.map((item) => [`${item.itemId}:${item.unit}`, effectiveInventoryQuantity(item, now)]),
   );
   return [...requirements.values()]
     .map((need) => {

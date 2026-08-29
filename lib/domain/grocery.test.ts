@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGroceryNeeds, formatGroceryQuantity } from './grocery';
+import { buildGroceryNeeds, formatGroceryQuantity, mergeGroceryRunItems, type GroceryNeed } from './grocery';
 import { STARTER_RECIPES } from './recipe';
 import { buildPlanningWeek, type ScheduleException } from './schedule';
 
@@ -24,15 +24,28 @@ describe('deterministic grocery calculation', () => {
 
   it('subtracts compatible inventory estimates and removes fully covered needs', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
-      { itemId: 'frozen-berries', quantity: 3, unit: 'cup' },
-      { itemId: 'greek-yogurt', quantity: 1, unit: 'cup' },
-    ]);
+      { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 3, unit: 'cup', confidence: 100, lastConfirmedAt: null },
+      { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup', confidence: 100, lastConfirmedAt: null },
+    ], friday);
     expect(needs.some((need) => need.itemId === 'frozen-berries')).toBe(false);
+    expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 3.75, inventoryUsed: 1 });
+  });
+
+  it('discounts uncertain inventory instead of treating every estimate as exact', () => {
+    const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
+      { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 2, unit: 'cup', confidence: 50, lastConfirmedAt: null },
+    ], friday);
     expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 3.75, inventoryUsed: 1 });
   });
 
   it('formats common shopping units clearly', () => {
     expect(formatGroceryQuantity(2, 'can')).toBe('2 cans');
     expect(formatGroceryQuantity(0.75, 'lb')).toBe('0.75 lb');
+  });
+
+  it('preserves completed purchases while refreshing pending calculations', () => {
+    const need: GroceryNeed = { id: 'store:yogurt:cup', itemId: 'yogurt', name: 'Yogurt', quantity: 2, unit: 'cup', store: 'Costco', inventoryUsed: 0, sources: ['Lunch'] };
+    const merged = mergeGroceryRunItems([{ ...need, quantity: 3 }], [{ ...need, checked: true, purchasedQuantity: 2, purchasedAt: '2026-08-29T00:00:00.000Z' }]);
+    expect(merged).toEqual([{ ...need, checked: true, purchasedQuantity: 2, purchasedAt: '2026-08-29T00:00:00.000Z' }]);
   });
 });

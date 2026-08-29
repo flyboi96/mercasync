@@ -101,6 +101,61 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function validInventory(data) {
+      return data.keys().hasOnly([
+          'itemId', 'name', 'quantity', 'unit', 'confidence', 'lastConfirmedAt',
+          'updatedBy', 'updatedAt'
+        ])
+        && data.itemId is string
+        && data.itemId.size() > 0
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 120
+        && data.quantity is number
+        && data.quantity >= 0
+        && data.unit is string
+        && data.unit.size() > 0
+        && data.confidence is int
+        && data.confidence >= 0
+        && data.confidence <= 100
+        && data.lastConfirmedAt is timestamp
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
+    function validGroceryRun(data) {
+      return data.keys().hasOnly([
+          'weekStart', 'items', 'calculationFingerprint', 'createdBy', 'createdAt',
+          'updatedBy', 'updatedAt'
+        ])
+        && data.weekStart is string
+        && data.weekStart.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.items is list
+        && data.items.size() <= 250
+        && data.calculationFingerprint is string
+        && data.createdBy is string
+        && data.createdAt is timestamp
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
+    function validInventoryTransaction(data) {
+      return data.keys().hasOnly([
+          'kind', 'itemId', 'name', 'quantity', 'unit', 'groceryRunId',
+          'groceryItemId', 'createdBy', 'createdAt'
+        ])
+        && data.kind == 'purchase'
+        && data.itemId is string
+        && data.name is string
+        && data.quantity is number
+        && data.quantity > 0
+        && data.unit is string
+        && data.groceryRunId is string
+        && data.groceryItemId is string
+        && data.createdBy == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
     match /households/{householdId} {
       allow read: if isHouseholdMember(householdId);
       allow create, update, delete: if false;
@@ -145,6 +200,35 @@ service cloud.firestore {
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.updatedAt == request.time;
         allow delete: if false;
+      }
+
+      match /inventory/{inventoryId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validInventory(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /groceryRuns/{weekStart} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if isHouseholdMember(householdId)
+          && validGroceryRun(request.resource.data)
+          && request.resource.data.weekStart == weekStart
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow update: if isHouseholdMember(householdId)
+          && validGroceryRun(request.resource.data)
+          && request.resource.data.weekStart == weekStart
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
+
+      match /inventoryTransactions/{transactionId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validInventoryTransaction(request.resource.data);
+        allow delete: if isHouseholdMember(householdId);
       }
 
       match /{document=**} {
