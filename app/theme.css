@@ -77,6 +77,19 @@
 .schedule-sheet input:focus { outline: 3px solid #f2c14e55; border-color: var(--saffron); }
 .save-schedule { width: 100%; min-height: 50px; margin-top: 8px; border: 0; border-radius: 12px; color: #fff; background: var(--green); font-weight: 850; cursor: pointer; }
 .sheet-note { color: var(--muted); text-align: center; font-size: 9px; line-height: 1.5; }
+.meal-meta { font-size: 8px; font-weight: 750; opacity: .75; }
+.sign-out { padding: 0; border: 0; color: var(--muted); background: transparent; font-size: inherit; cursor: pointer; }
+.auth-shell { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top, #f2c14e2e, transparent 36%), var(--cream); }
+.auth-card { width: min(420px, 100%); padding: 28px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); box-shadow: 0 22px 60px #18302a1f; }
+.auth-card .brand { padding: 0 0 30px; }
+.auth-card h1 { margin: 7px 0; font: 500 32px Georgia, serif; }
+.auth-card > p:not(.eyebrow):not(.auth-error) { margin: 0 0 22px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.auth-card label { display: grid; gap: 7px; margin: 14px 0; color: var(--ink); font-size: 10px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+.auth-card input { width: 100%; min-height: 50px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: #fff; font-size: 16px; }
+.auth-card input:focus { outline: 3px solid #f2c14e55; border-color: var(--saffron); }
+.auth-card > button { width: 100%; min-height: 50px; margin-top: 8px; border: 0; border-radius: 12px; color: #fff; background: var(--green); font-weight: 850; cursor: pointer; }
+.auth-card > button:disabled { opacity: .65; cursor: wait; }
+.auth-error { padding: 10px 12px; border-radius: 9px; color: #7a3026; background: #e5654f1f; font-size: 11px; line-height: 1.4; }
 
 @media (max-width: 720px) {
   .calendar-actions { margin: 0 -16px; padding: 18px 16px; border-radius: 0; }
