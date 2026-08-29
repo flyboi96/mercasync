@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: 'A shared household planner for meals, schedules, inventory, and groceries.',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'MercaSync' },
-  icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
+  icons: { icon: '/favicon-32.png', apple: '/icon-180.png' },
 };
 
 export default function RootLayout({
