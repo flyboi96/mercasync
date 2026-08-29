@@ -107,8 +107,9 @@ service cloud.firestore {
     }
 
     function validMealOverride(data) {
-      return data.keys().hasOnly(['date', 'kind', 'recipeId', 'servings', 'updatedBy', 'updatedAt'])
+      return data.keys().hasOnly(['date', 'mealType', 'kind', 'recipeId', 'servings', 'updatedBy', 'updatedAt'])
         && data.date is string
+        && (data.mealType == 'lunch' || data.mealType == 'dinner')
         && (data.kind == 'recipe' || data.kind == 'leftovers' || data.kind == 'eat_out' || data.kind == 'skip')
         && (data.recipeId == null || data.recipeId is string)
         && (data.servings == null || (data.servings is int && data.servings >= 0 && data.servings <= 12))
@@ -323,12 +324,11 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
         allow update: if isHouseholdMember(householdId)
           && validRecipe(request.resource.data)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'favorite', 'rating', 'note', 'updatedBy', 'updatedAt'
-          ])
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.updatedAt == request.time;
-        allow delete: if false;
+        allow delete: if isHouseholdMember(householdId);
       }
 
       match /inventory/{inventoryId} {

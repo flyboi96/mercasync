@@ -480,6 +480,18 @@
 .weekly-frequency span { display: grid; gap: 3px; }
 .weekly-frequency small { color: var(--muted); }
 .delete-recurring { width: 100%; min-height: 46px; border: 0; background: transparent; color: #a53d32; font-weight: 800; }
+.week-navigator { display: grid; grid-template-columns: 52px 1fr 52px; align-items: stretch; gap: 8px; max-width: 760px; margin: 0 auto 18px; }
+.week-navigator > button { min-height: 54px; border: 1px solid var(--line); border-radius: 14px; background: #fffdf8; color: var(--green); font-size: 28px; font-weight: 850; }
+.week-navigator .week-label { display: grid; place-items: center; gap: 1px; padding: 7px 12px; font-size: inherit; }
+.week-label small { color: var(--coral); font-size: 10px; letter-spacing: .12em; }
+.week-label strong { color: var(--ink); font-size: 15px; }
+.week-label span { color: var(--muted); font-size: 10px; font-weight: 600; }
+.recipe-admin-actions { position: fixed; z-index: 70; right: max(24px, calc((100vw - 840px) / 2)); bottom: 28px; display: flex; gap: 8px; }
+.recipe-admin-actions button { min-height: 46px; padding: 0 18px; border: 0; border-radius: 13px; background: var(--green); color: white; font-weight: 850; box-shadow: 0 8px 24px #17271d33; }
+.recipe-admin-actions button.danger { background: #a94438; }
+.grocery-row-actions { display: grid; grid-template-rows: 1fr 1fr; width: 74px; border-left: 1px solid #e2ddcf; }
+.grocery-row-actions button { border: 0; background: #f5f0e5; color: var(--green); font-size: 11px; font-weight: 850; }
+.grocery-row-actions button + button { border-top: 1px solid #e2ddcf; }
 
 @media (max-width: 720px) {
   .meal-action-backdrop { place-items: end center; padding: 0; }
@@ -492,4 +504,6 @@
   .move-store { width: 78px; }
   .recurring-item-grid { grid-template-columns: 1fr 1fr; }
   .recurring-item-grid label:last-child { grid-column: 1 / -1; }
+  .week-navigator { grid-template-columns: 48px 1fr 48px; margin: -4px 0 14px; }
+  .recipe-admin-actions { right: 16px; bottom: calc(82px + env(safe-area-inset-bottom)); }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { STARTER_RECIPES, type Recipe } from '@/lib/domain/recipe';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
@@ -69,4 +69,18 @@ export async function createRecipe(recipe: Recipe, householdId?: string) {
   if (!auth.currentUser) throw new Error('Sign in before adding a recipe.');
   const { id, ...data } = recipe;
   await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id), { ...data, createdBy: auth.currentUser.uid, createdAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+}
+
+export async function updateRecipe(recipe: Recipe, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before editing a recipe.');
+  const { id, ...data } = recipe;
+  await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id), { ...data, updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+}
+
+export async function deleteRecipe(id: string, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const { db } = getFirebaseServices();
+  await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id));
 }

@@ -14,11 +14,12 @@ export async function saveMealOverride(override: Omit<MealOverride, 'id'>, house
   if (!usesFirebaseBackend()) return;
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before changing a meal.');
-  await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'mealOverrides', override.date), { ...override, updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+  const id = override.mealType === 'lunch' ? `${override.date}--lunch` : override.date;
+  await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'mealOverrides', id), { ...override, mealType: override.mealType || 'dinner', updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
 }
 
-export async function clearMealOverride(date: string, householdId?: string) {
+export async function clearMealOverride(date: string, mealType: 'lunch' | 'dinner' = 'dinner', householdId?: string) {
   if (!usesFirebaseBackend()) return;
   const { db } = getFirebaseServices();
-  await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'mealOverrides', date));
+  await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'mealOverrides', mealType === 'lunch' ? `${date}--lunch` : date));
 }
