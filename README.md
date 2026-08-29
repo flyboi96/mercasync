@@ -13,6 +13,10 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Separate month-style work calendar and weekly meal calendar
 - Multi-day schedule exceptions, including a one-tap three-week trip range
 - Shared weekly dinner-count control that immediately adjusts the plan and groceries
+- Five-minute Weekend Reset that confirms only uncertain inventory, previews the generated menu, and opens a finished shopping list
+- Explainable recipe ranking using ratings, favorites, recent history, schedule fit, pantry coverage, and variety
+- Approved meal plans stay stable while shopping; schedule or preference changes intentionally reopen planning
+- Shared biweekly Costco switch that routes immediate needs to King Soopers on off weeks
 - Recipe favorites, ratings, notes, and history surface
 - Shared inventory estimates with confirmation dates and automatic confidence decay
 - One-tap inventory corrections with an exact quantity fallback

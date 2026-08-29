@@ -67,6 +67,7 @@ households/{householdId}/mealCompletions/{dateAndMealType}
 
 households/{householdId}/planningSettings/current
   dinnerTarget: 0..6
+  costcoThisWeek
   updatedBy
   updatedAt
 ```
@@ -78,6 +79,10 @@ Firestore rules authorize reads and writes by checking the signed-in UID against
 Schedule expansion and dinner adaptation are pure domain rules. The UI supplies a seven-day date range plus persisted exceptions and receives derived daily availability, diner count, effort, servings, and an explanation. This keeps planning deterministic and testable and prevents either Firebase or D1 details from leaking into meal-planning code.
 
 Normal days mean both people are home. Exceptions override that baseline for one person over one date or an inclusive date range. Away and work-trip exceptions remove that diner. Late shifts keep the diner but reduce effort and favor leftovers or fast meals. Home, day-off, and holiday overrides restore normal availability. The shared dinner target selects how many recipe dinners to cook; remaining at-home nights become leftovers while the established dinner-out night remains separate.
+
+Recipe selection is deterministic and explainable. The planner scores shared dinner recipes using ratings, favorites, late-night suitability, recent cooking, pantry coverage, and cuisine/protein/method variety. A Weekend Reset uses current inventory to generate a draft, then saves an approved plan. The approved plan remains stable while purchases change inventory; schedule, dinner-count, or recipe-preference changes invalidate it and produce a new draft.
+
+The shared Costco-week setting represents the household's biweekly cadence without a paid scheduler. During Costco weeks, bulk-designated ingredients remain on the Costco list. During off weeks, immediate requirements are routed to King Soopers so the weekly plan never depends on a skipped bulk run.
 
 ## Grocery and inventory reconciliation
 

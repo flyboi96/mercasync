@@ -68,6 +68,15 @@ Added after the original audit:
 - The household can choose zero through six dinners to cook for the week. The shared setting is stored in Firestore and automatically changes the meal plan and calculated grocery needs.
 - Long-trip expansion, adjustable dinner selection, and month-grid boundaries are covered by domain tests.
 
+## Version 0.12 weekly reset update
+
+- The Plan view now starts a guided Weekend Reset that presents only inventory below 75% confidence, using four one-tap corrections plus a skip path.
+- After review, the reset previews the proposed dinners, allows a final dinner-count adjustment, saves the approved plan, and opens the calculated grocery list.
+- Dinner recipes are selected from the shared library by deterministic ratings, favorites, schedule fit, recent history, pantry coverage, and variety rules. Each choice includes a plain-language rationale.
+- Approved plans are frozen against routine inventory and purchase updates. Schedule, dinner-count, and recipe-preference changes deliberately invalidate approval and produce a fresh draft.
+- Costco cadence is a shared household setting. Costco ingredients stay at Costco during a run week and move to King Soopers during an off week so immediate needs remain purchasable.
+- Planner ranking, approval invalidation, and store-cadence behavior are covered by domain tests.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.
