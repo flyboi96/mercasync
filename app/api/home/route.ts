@@ -37,7 +37,18 @@ export async function GET() {
   await ensureSeeded();
   const groceryResult = await env.DB.prepare("SELECT gi.id,i.name,json_extract(gi.reason_json,'$.detail') AS detail,gr.store,gi.checked FROM grocery_items gi JOIN ingredients i ON i.id=gi.ingredient_id JOIN grocery_runs gr ON gr.id=gi.run_id ORDER BY gr.store DESC,i.name").all();
   const inventoryResult = await env.DB.prepare("SELECT i.name,printf('%g %s',l.estimated_quantity,l.unit) AS qty,CAST(ROUND(l.confidence*100) AS INTEGER) AS confidence FROM inventory_lots l JOIN ingredients i ON i.id=l.ingredient_id ORDER BY l.confidence DESC").all();
-  return NextResponse.json({ groceries: groceryResult.results.map((row) => ({ ...row, checked: Boolean(row.checked) })), inventory: inventoryResult.results });
+  const eventResult = await env.DB.prepare("SELECT id,person_id AS personId,kind,date(starts_at/1000,'unixepoch') AS date,title,location FROM schedule_events WHERE ends_at >= ? ORDER BY starts_at").bind(Date.now() - 86400000).all();
+  return NextResponse.json({ groceries: groceryResult.results.map((row) => ({ ...row, checked: Boolean(row.checked) })), inventory: inventoryResult.results, events: eventResult.results });
+}
+
+export async function POST(request: Request) {
+  const body = await request.json() as { personId?: string; kind?: string; date?: string; title?: string; location?: string };
+  const kinds = ['home', 'late_shift', 'work_trip', 'day_off', 'holiday', 'away'];
+  if (!['alex', 'nathalia'].includes(body.personId || '') || !kinds.includes(body.kind || '') || !/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !body.title?.trim()) return NextResponse.json({ error: 'Invalid schedule change' }, { status: 400 });
+  const startsAt = new Date(`${body.date}T12:00:00-06:00`).getTime();
+  const id = crypto.randomUUID();
+  await env.DB.prepare('INSERT INTO schedule_events (id,person_id,kind,starts_at,ends_at,title,location,source) VALUES (?,?,?,?,?,?,?,?)').bind(id, body.personId, body.kind, startsAt, startsAt + 3600000, body.title.trim(), body.location || null, 'manual').run();
+  return NextResponse.json({ id, personId: body.personId, kind: body.kind, date: body.date, title: body.title.trim(), location: body.location || null });
 }
 
 export async function PATCH(request: Request) {

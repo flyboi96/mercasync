@@ -1,0 +1,88 @@
+/* MercaSync identity: market green, tomato coral, saffron, and warm cream. */
+:root {
+  --ink: #18302a;
+  --muted: #6f7d76;
+  --line: #dfded4;
+  --green: #0f4c3a;
+  --coral: #e5654f;
+  --saffron: #f2c14e;
+  --leaf: #a7c957;
+  --cream: #fff8ed;
+  --surface: #fffdf8;
+}
+
+.calendar-page { display: grid; gap: 14px; }
+.calendar-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, #0f4c3a, #19644d);
+}
+.calendar-actions h2 { margin: 5px 0; font: 500 22px Georgia, serif; }
+.calendar-actions p:last-child { margin: 0; color: #d6e7df; font-size: 10px; line-height: 1.45; }
+.calendar-actions .eyebrow { color: #b9d5c8; }
+.add-schedule {
+  flex: none;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--coral);
+  box-shadow: 0 8px 20px #0b302533;
+  font-weight: 850;
+  cursor: pointer;
+}
+.event-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+.event-strip article {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--saffron);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px #18302a0a;
+}
+.event-strip strong { display: block; margin-bottom: 4px; font-size: 12px; }
+.event-strip small { color: var(--muted); font-size: 9px; font-weight: 750; text-transform: uppercase; letter-spacing: .07em; }
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: end center;
+  padding: 20px;
+  background: #10241d80;
+  backdrop-filter: blur(3px);
+}
+.schedule-sheet {
+  width: min(520px, 100%);
+  padding: 14px 20px 20px;
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px #10241d55;
+}
+.sheet-handle { width: 44px; height: 5px; margin: 0 auto 12px; border-radius: 20px; background: #d7d8d1; }
+.sheet-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sheet-heading h2 { margin: 4px 0 0; font: 500 22px Georgia, serif; }
+.sheet-heading > button { width: 44px; height: 44px; border: 0; border-radius: 50%; color: var(--ink); background: #f1efe7; font-size: 22px; cursor: pointer; }
+.schedule-sheet label { display: grid; gap: 7px; margin: 13px 0; font-size: 10px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+.schedule-sheet label small { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.schedule-sheet select,
+.schedule-sheet input { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: #fff; font-size: 14px; font-weight: 600; }
+.schedule-sheet select:focus,
+.schedule-sheet input:focus { outline: 3px solid #f2c14e55; border-color: var(--saffron); }
+.save-schedule { width: 100%; min-height: 50px; margin-top: 8px; border: 0; border-radius: 12px; color: #fff; background: var(--green); font-weight: 850; cursor: pointer; }
+.sheet-note { color: var(--muted); text-align: center; font-size: 9px; line-height: 1.5; }
+
+@media (max-width: 720px) {
+  .calendar-actions { margin: 0 -16px; padding: 18px 16px; border-radius: 0; }
+  .calendar-actions h2 { font-size: 20px; }
+  .calendar-actions p:last-child { max-width: 190px; }
+  .add-schedule { padding: 0 12px; }
+  .sheet-backdrop { padding: 0; }
+  .schedule-sheet { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
+}
