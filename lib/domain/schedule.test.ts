@@ -43,6 +43,7 @@ describe('schedule-to-dinner rules', () => {
     expect(monday.alex.label).toBe('Home');
     expect(monday.nathalia.label).toBe('Home');
     expect(monday.meal).toMatchObject({ servings: 2, effort: 'Standard' });
+    expect(monday.lunch).toMatchObject({ servings: 2, effort: '5 min' });
   });
 
   it('reduces a solo dinner to one quick serving', () => {
@@ -52,6 +53,7 @@ describe('schedule-to-dinner rules', () => {
     )[0];
     expect(monday.nathalia.label).toBe('Work trip');
     expect(monday.meal).toMatchObject({ servings: 1, effort: 'Quick' });
+    expect(monday.lunch.servings).toBe(1);
     expect(monday.meal.rationale).toContain('Alex');
   });
 

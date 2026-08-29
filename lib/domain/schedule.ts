@@ -34,6 +34,12 @@ export type PlanningDay = {
   isToday: boolean;
   alex: Availability;
   nathalia: Availability;
+  lunch: {
+    title: string;
+    servings: number;
+    effort: '5 min' | '10 min';
+    rationale: string;
+  };
   meal: {
     title: string;
     tone: string;
@@ -63,6 +69,16 @@ const baseDinners = [
   { title: 'Steak taco night', tone: 'berry', effort: 'Relaxed' as const },
   { title: 'Dinner out', tone: 'ink', effort: 'None' as const },
   { title: 'Ginger chicken soup', tone: 'sage', effort: 'Standard' as const },
+];
+
+const baseLunches = [
+  { title: 'Turkey hummus wrap', effort: '5 min' as const },
+  { title: 'Greek yogurt crunch bowl', effort: '5 min' as const },
+  { title: 'Rotisserie chicken salad', effort: '10 min' as const },
+  { title: 'Tuna cucumber toast', effort: '5 min' as const },
+  { title: 'Chicken pesto wrap', effort: '5 min' as const },
+  { title: 'Egg and avocado toast', effort: '10 min' as const },
+  { title: 'Snack plate with turkey', effort: '5 min' as const },
 ];
 
 function dateAtNoonUtc(date: string) {
@@ -182,6 +198,8 @@ export function buildPlanningWeek(
     const date = addLocalDays(start, index);
     const alex = availabilityFor('alex', date, exceptions);
     const nathalia = availabilityFor('nathalia', date, exceptions);
+    const lunchDiners = people.filter((personId) => ({ alex, nathalia })[personId].isHome);
+    const baseLunch = baseLunches[index];
     const displayDate = dateAtNoonUtc(date);
 
     return {
@@ -194,6 +212,13 @@ export function buildPlanningWeek(
       isToday: date === today,
       alex,
       nathalia,
+      lunch: {
+        ...baseLunch,
+        servings: lunchDiners.length,
+        rationale: lunchDiners.length === 0
+          ? 'Nobody is home for lunch.'
+          : `${lunchDiners.length} extremely quick ${lunchDiners.length === 1 ? 'lunch' : 'lunches'} for whoever is home.`,
+      },
       meal: adaptDinner(baseDinner, { alex, nathalia }),
     };
   });
