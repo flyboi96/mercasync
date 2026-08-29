@@ -7,7 +7,7 @@ import {
   subscribeToScheduleExceptions,
   updateScheduleException,
 } from '@/lib/data/schedule-repository';
-import { saveMealPlan, subscribeToSavedMealPlan } from '@/lib/data/meal-plan-repository';
+import { saveDinnerTarget, saveMealPlan, subscribeToDinnerTarget, subscribeToSavedMealPlan } from '@/lib/data/meal-plan-repository';
 import { subscribeToRecipes, updateRecipePreferences } from '@/lib/data/recipe-repository';
 import { confirmInventoryItem, setInventoryQuantity, subscribeToInventory } from '@/lib/data/inventory-repository';
 import { setGroceryItemPurchased, subscribeToGroceryRun, syncGroceryRun } from '@/lib/data/grocery-repository';
@@ -18,9 +18,14 @@ import { buildGroceryNeeds, formatGroceryQuantity, type GroceryRunItem } from '@
 import { correctedInventoryQuantity, effectiveInventoryConfidence, STARTER_INVENTORY, type InventoryCorrection, type InventoryItem } from '@/lib/domain/inventory';
 import { STARTER_RECIPES, type MealType, type Recipe } from '@/lib/domain/recipe';
 import {
+  addLocalDays,
   buildPlanningWeek,
+  calendarMonthDays,
+  calendarMonthLabel,
   formatLongDate,
+  localDateForTimeZone,
   planningWeekLabel,
+  scheduleExceptionApplies,
   type PlanningDay,
   type ScheduleException,
   type ScheduleExceptionKind,
@@ -57,9 +62,10 @@ export default function Home() {
   const [toast, setToast] = useState('');
   const [savedPlanFingerprint, setSavedPlanFingerprint] = useState<string | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
+  const [dinnerTarget, setDinnerTarget] = useState(5);
   const auth = useHouseholdSession();
   const firebaseEnabled = usesFirebaseBackend();
-  const week = useMemo(() => buildPlanningWeek(events), [events]);
+  const week = useMemo(() => buildPlanningWeek(events, new Date(), 'America/Denver', dinnerTarget), [dinnerTarget, events]);
   const calculatedNeeds = useMemo(() => buildGroceryNeeds(week, recipeItems, inventory), [inventory, recipeItems, week]);
   const displayItems = useMemo(() => {
     if (!firebaseEnabled) return items;
@@ -147,6 +153,14 @@ export default function Home() {
       () => notify('Could not load the shared recipe library.'),
     );
   }, [auth.session, firebaseEnabled, notify]);
+  useEffect(() => {
+    if (!firebaseEnabled || !auth.session) return;
+    return subscribeToDinnerTarget(
+      auth.session.householdId,
+      setDinnerTarget,
+      () => notify('Could not load the weekly dinner target.'),
+    );
+  }, [auth.session, firebaseEnabled, notify]);
   const persistPlan = async () => {
     setSavingPlan(true);
     try {
@@ -173,6 +187,12 @@ export default function Home() {
       notify(checked ? `${current.name} added to inventory` : `${current.name} returned to the list`);
     } catch { setItems((all) => all.map((item) => item.id === id ? { ...item, checked: current.checked } : item)); notify('Could not save that change. Try again.'); }
   };
+  const changeDinnerTarget = async (target: number) => {
+    const previous = dinnerTarget;
+    setDinnerTarget(target);
+    try { await saveDinnerTarget(target, auth.session?.householdId); notify(`Planning ${target} ${target === 1 ? 'dinner' : 'dinners'} to cook.`); }
+    catch { setDinnerTarget(previous); notify('Could not save the dinner count.'); }
+  };
   const title = active === 'Plan' ? 'Your week' : active;
 
   if (firebaseEnabled && auth.loading) return <LoadingView />;
@@ -183,7 +203,7 @@ export default function Home() {
     <section className="content">
       <header className="mobile-header"><div className="brand"><span className="brand-mark">M</span><span>MercaSync</span><small className="version-badge">v{APP_VERSION}</small></div><div className="mobile-people"><span className="avatar alex">A</span><span className="avatar nathalia">N</span></div></header>
       <header className="topbar"><div><p className="eyebrow">{formatLongDate()}</p><h1>{title}</h1><p>{active === 'Plan' ? 'Lunch and dinner, balanced around who’s home.' : 'Shared, current, and ready for both of you.'}</p></div>{active === 'Plan' && <button className={planIsSaved ? 'primary-button saved' : 'primary-button'} onClick={persistPlan} disabled={savingPlan || planIsSaved}><span>{planIsSaved ? '✓' : '↑'}</span> {savingPlan ? 'Saving…' : planIsSaved ? 'Plan saved' : savedPlanFingerprint ? 'Save update' : 'Save plan'}</button>}</header>
-      {active === 'Plan' && <PlanView items={displayItems} inventory={inventory} week={week} open={setActive} />}
+      {active === 'Plan' && <PlanView items={displayItems} inventory={inventory} week={week} dinnerTarget={dinnerTarget} setDinnerTarget={changeDinnerTarget} open={setActive} />}
       {active === 'Calendar' && <CalendarView events={events} week={week} recipes={recipeItems} completions={mealCompletions} householdId={auth.session?.householdId} onChanged={(changed) => setEvents((current) => [...current.filter((event) => event.id !== changed.id), changed].sort((a, b) => a.date.localeCompare(b.date)))} onDeleted={(id) => setEvents((current) => current.filter((event) => event.id !== id))} notify={notify} />}
       {active === 'Recipes' && <RecipesView recipes={recipeItems} householdId={auth.session?.householdId} onUpdated={(updated) => setRecipeItems((current) => current.map((recipe) => recipe.id === updated.id ? updated : recipe))} notify={notify} />}
       {active === 'Inventory' && <InventoryView inventory={inventory} householdId={auth.session?.householdId} notify={notify} />}
@@ -194,14 +214,19 @@ export default function Home() {
   </main>;
 }
 
-function PlanView({ items, inventory, week, open }: { items: Grocery[]; inventory: InventoryItem[]; week: PlanningDay[]; open: (tab: string) => void }) {
-  const dinnerCount = week.filter((day) => day.meal.label === 'DINNER' && day.meal.title !== 'Leftovers').length;
+function PlanView({ items, inventory, week, dinnerTarget, setDinnerTarget, open }: { items: Grocery[]; inventory: InventoryItem[]; week: PlanningDay[]; dinnerTarget: number; setDinnerTarget: (target: number) => void; open: (tab: string) => void }) {
+  const dinnerCount = week.filter((day) => day.meal.recipeId).length;
   const awayDays = week.filter((day) => !day.alex.isHome || !day.nathalia.isHome).length;
   const lateDays = week.filter((day) => day.alex.isLate || day.nathalia.isLate).length;
   const firstDinner = week.find((day) => day.meal.servings > 0) || week[0];
   const alexBreakfasts = week.filter((day) => day.alex.isHome).length;
   const nathaliaSnacks = week.filter((day) => day.nathalia.isHome).length;
-  return <><section className="today-card"><div><p className="eyebrow">NEXT DINNER · {firstDinner?.meal.servings || 0} SERVINGS</p><h2>{firstDinner?.meal.title}</h2><p>{firstDinner?.meal.effort} effort · {firstDinner?.meal.rationale}</p></div><button onClick={() => open('Calendar')}>View schedule</button></section><section className="week-section"><div className="section-heading"><div><h2>{planningWeekLabel(week)}</h2><p>{dinnerCount} dinner ideas · {awayDays} away {awayDays === 1 ? 'day' : 'days'} · {lateDays} late {lateDays === 1 ? 'night' : 'nights'}</p></div><button className="text-button" onClick={() => open('Calendar')}>Calendar →</button></div><div className="week-grid">{week.map((day, index) => <article className={day.isToday || index === 0 ? 'day-card today' : 'day-card'} key={day.date}><div className="date"><span>{day.dayLabel}</span><strong>{day.dateLabel}</strong></div><div className="availability"><span className="mini-avatar alex">A</span><p>{day.alex.label}</p></div><div className="availability"><span className="mini-avatar nathalia">N</span><p>{day.nathalia.label}</p></div><div className={`meal ${day.meal.tone}`} title={day.meal.rationale}><small>{day.meal.label}</small><strong>{day.meal.title}</strong><span className="meal-meta">{day.meal.servings} {day.meal.servings === 1 ? 'serving' : 'servings'} · {day.meal.effort}</span></div></article>)}</div></section><section className="dashboard-grid"><article className="panel tap-panel" onClick={() => open('Groceries')}><div className="panel-heading"><div><p className="eyebrow">NEXT RUN · SATURDAY</p><h2>Groceries</h2></div><span className="count-badge">{items.filter(i => !i.checked).length}</span></div><p className="panel-copy">King Soopers is ready. Costco cadence is still on the legacy list.</p><span className="panel-link">Open list →</span></article><article className="panel tap-panel" onClick={() => open('Inventory')}><div className="panel-heading"><div><p className="eyebrow">ESTIMATED ON HAND</p><h2>Kitchen pulse</h2></div><span className="count-badge warning">1</span></div><p className="panel-copy">{inventory[2]?.name || 'Greek yogurt'} needs one quick confirmation.</p><span className="panel-link">Review inventory →</span></article><article className="panel routine-panel"><div className="panel-heading"><div><p className="eyebrow">SCHEDULE-AWARE RHYTHM</p><h2>Recurring food</h2></div></div><div className="routine"><span className="avatar alex">A</span><div><strong>Home breakfast</strong><p>Eggs, oats, berries, yogurt</p></div><em>{alexBreakfasts}×</em></div><div className="routine"><span className="avatar nathalia">N</span><div><strong>Home snacks</strong><p>Fruit, cheese, almonds</p></div><em>{nathaliaSnacks}×</em></div></article></section></>;
+  return <>
+    <section className="dinner-target"><div><p className="eyebrow">THIS WEEK</p><strong>Dinners to cook</strong><small>The remaining nights become leftovers or dinner out.</small></div><div className="stepper"><button aria-label="Cook one fewer dinner" disabled={dinnerTarget === 0} onClick={() => setDinnerTarget(dinnerTarget - 1)}>−</button><output aria-live="polite">{dinnerTarget}</output><button aria-label="Cook one more dinner" disabled={dinnerTarget === 6} onClick={() => setDinnerTarget(dinnerTarget + 1)}>＋</button></div></section>
+    <section className="today-card"><div><p className="eyebrow">NEXT DINNER · {firstDinner?.meal.servings || 0} SERVINGS</p><h2>{firstDinner?.meal.title}</h2><p>{firstDinner?.meal.effort} effort · {firstDinner?.meal.rationale}</p></div><button onClick={() => open('Calendar')}>View schedule</button></section>
+    <section className="week-section"><div className="section-heading"><div><h2>{planningWeekLabel(week)}</h2><p>{dinnerCount} dinners to cook · {awayDays} away {awayDays === 1 ? 'day' : 'days'} · {lateDays} late {lateDays === 1 ? 'night' : 'nights'}</p></div><button className="text-button" onClick={() => open('Calendar')}>Calendar →</button></div><div className="week-grid">{week.map((day, index) => <article className={day.isToday || index === 0 ? 'day-card today' : 'day-card'} key={day.date}><div className="date"><span>{day.dayLabel}</span><strong>{day.dateLabel}</strong></div><div className="availability"><span className="mini-avatar alex">A</span><p>{day.alex.label}</p></div><div className="availability"><span className="mini-avatar nathalia">N</span><p>{day.nathalia.label}</p></div><div className={`meal ${day.meal.tone}`} title={day.meal.rationale}><small>{day.meal.label}</small><strong>{day.meal.title}</strong><span className="meal-meta">{day.meal.servings} {day.meal.servings === 1 ? 'serving' : 'servings'} · {day.meal.effort}</span></div></article>)}</div></section>
+    <section className="dashboard-grid"><article className="panel tap-panel" onClick={() => open('Groceries')}><div className="panel-heading"><div><p className="eyebrow">NEXT RUN · SATURDAY</p><h2>Groceries</h2></div><span className="count-badge">{items.filter(i => !i.checked).length}</span></div><p className="panel-copy">King Soopers is ready. Costco cadence is still on the legacy list.</p><span className="panel-link">Open list →</span></article><article className="panel tap-panel" onClick={() => open('Inventory')}><div className="panel-heading"><div><p className="eyebrow">ESTIMATED ON HAND</p><h2>Kitchen pulse</h2></div><span className="count-badge warning">1</span></div><p className="panel-copy">{inventory[2]?.name || 'Greek yogurt'} needs one quick confirmation.</p><span className="panel-link">Review inventory →</span></article><article className="panel routine-panel"><div className="panel-heading"><div><p className="eyebrow">SCHEDULE-AWARE RHYTHM</p><h2>Recurring food</h2></div></div><div className="routine"><span className="avatar alex">A</span><div><strong>Home breakfast</strong><p>Eggs, oats, berries, yogurt</p></div><em>{alexBreakfasts}×</em></div><div className="routine"><span className="avatar nathalia">N</span><div><strong>Home snacks</strong><p>Fruit, cheese, almonds</p></div><em>{nathaliaSnacks}×</em></div></article></section>
+  </>;
 }
 function CalendarView({ events, week, recipes, completions, householdId, onChanged, onDeleted, notify }: { events: ScheduleException[]; week: PlanningDay[]; recipes: Recipe[]; completions: MealCompletion[]; householdId?: string; onChanged: (changed: ScheduleException) => void; onDeleted: (id: string) => void; notify: (message: string) => void }) {
   const [view, setView] = useState<'work' | 'meals'>('work');
@@ -210,18 +235,23 @@ function CalendarView({ events, week, recipes, completions, householdId, onChang
   const [personId, setPersonId] = useState<'alex' | 'nathalia'>('alex');
   const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift');
   const [date, setDate] = useState(week[0]?.date || '');
+  const [endDate, setEndDate] = useState(week[0]?.date || '');
+  const [monthAnchor, setMonthAnchor] = useState(localDateForTimeZone(new Date()));
   const [note, setNote] = useState('');
   const labels: Record<ScheduleExceptionKind, string> = { late_shift: 'Late shift', work_trip: 'Work trip', day_off: 'Day off', holiday: 'Holiday', home: 'Home / available', away: 'Away' };
-  const showEditor = (event?: ScheduleException) => {
+  const showEditor = (event?: ScheduleException, selectedDate?: string) => {
     setEditing(event || null);
     setPersonId(event?.personId || 'alex');
     setKind(event?.kind || 'late_shift');
-    setDate(event?.date || week[0]?.date || '');
+    const start = event?.date || selectedDate || week[0]?.date || '';
+    setDate(start);
+    setEndDate(event?.endDate || start);
     setNote(event?.title === labels[event?.kind || 'late_shift'] ? '' : event?.title || '');
     setOpen(true);
   };
   const save = async () => {
-    const input = { personId, kind, date, title: note.trim() || labels[kind] };
+    if (endDate < date) { notify('The end date must be on or after the start date.'); return; }
+    const input = { personId, kind, date, endDate: endDate === date ? null : endDate, title: note.trim() || labels[kind] };
     try {
       if (editing) {
         await updateScheduleException(editing.id, input, householdId);
@@ -233,6 +263,12 @@ function CalendarView({ events, week, recipes, completions, householdId, onChang
       notify('Work calendar saved. The meal plan now reflects it.');
     } catch { notify('Could not save that schedule change.'); }
   };
+  const moveMonth = (offset: number) => {
+    const next = new Date(`${monthAnchor.slice(0, 7)}-15T12:00:00Z`);
+    next.setUTCMonth(next.getUTCMonth() + offset);
+    setMonthAnchor(next.toISOString().slice(0, 10));
+  };
+  const monthDays = calendarMonthDays(monthAnchor);
   const remove = async (event: ScheduleException) => {
     if (!window.confirm(`Delete “${event.title}”?`)) return;
     try {
@@ -256,17 +292,17 @@ function CalendarView({ events, week, recipes, completions, householdId, onChang
     </div>
     {view === 'work' ? <>
       <div className="calendar-actions"><div><p className="eyebrow">ONLY THE UNUSUAL DAYS</p><h2>Alex & Nathalia</h2><p>Normal Monday–Friday routines stay assumed. Add holidays, trips, late work, and unusual days.</p></div><button className="add-schedule" onClick={() => showEditor()}>＋ Add change</button></div>
-      {events.length > 0 && <div className="event-strip">{events.map(event => <article key={event.id}><span className={`avatar ${event.personId}`}>{event.personId === 'alex' ? 'A' : 'N'}</span><div><strong>{event.title}</strong><small>{event.date} · {labels[event.kind]}</small></div><div className="event-actions"><button onClick={() => showEditor(event)}>Edit</button><button className="danger" onClick={() => remove(event)}>Delete</button></div></article>)}</div>}
-      <div className="stack-list">{week.map((day) => <article className="schedule-row work-only" key={day.date}><div className="schedule-date"><strong>{day.dateLabel}</strong><span>{day.dayLabel}</span></div><div className="schedule-people"><p><span className="mini-avatar alex">A</span><strong>Alex</strong><small>{day.alex.label}</small></p><p><span className="mini-avatar nathalia">N</span><strong>Nathalia</strong><small>{day.nathalia.label}</small></p></div></article>)}</div>
+      {events.length > 0 && <div className="event-strip">{events.map(event => <article key={event.id}><span className={`avatar ${event.personId}`}>{event.personId === 'alex' ? 'A' : 'N'}</span><div><strong>{event.title}</strong><small>{event.date}{event.endDate ? ` → ${event.endDate}` : ''} · {labels[event.kind]}</small></div><div className="event-actions"><button onClick={() => showEditor(event)}>Edit</button><button className="danger" onClick={() => remove(event)}>Delete</button></div></article>)}</div>}
+      <section className="work-month"><header><button aria-label="Previous month" onClick={() => moveMonth(-1)}>‹</button><h2>{calendarMonthLabel(monthAnchor)}</h2><button aria-label="Next month" onClick={() => moveMonth(1)}>›</button></header><div className="month-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div><div className="month-grid">{monthDays.map((day) => { const dayEvents = events.filter((event) => scheduleExceptionApplies(event, day)); return <button key={day} className={`${day.slice(0, 7) === monthAnchor.slice(0, 7) ? '' : 'outside'} ${day === localDateForTimeZone(new Date()) ? 'today' : ''}`} onClick={() => showEditor(undefined, day)}><strong>{Number(day.slice(-2))}</strong><span className="month-events">{dayEvents.slice(0, 2).map((event) => <i className={event.personId} key={event.id}>{event.personId === 'alex' ? 'A' : 'N'} · {labels[event.kind]}</i>)}</span>{dayEvents.length > 2 && <small>+{dayEvents.length - 2}</small>}</button>; })}</div></section>
     </> : <>
       <div className="calendar-actions meal-calendar-head"><div><p className="eyebrow">FOOD CALENDAR</p><h2>Lunch, dinner & shopping</h2><p>Lunch stays extremely fast. Servings react automatically to the work calendar.</p></div></div>
-      <div className="stack-list">{week.map((day, index) => {
+      <div className="meal-week-calendar">{week.map((day, index) => {
         const lunchStatus = completions.find((item) => item.id === mealCompletionId(day.date, 'lunch'))?.status;
         const dinnerStatus = completions.find((item) => item.id === mealCompletionId(day.date, 'dinner'))?.status;
-        return <article className="meal-calendar-row" key={day.date}><div className="schedule-date"><strong>{day.dateLabel}</strong><span>{day.dayLabel}</span></div><div className="meal-slot lunch-slot"><small>LUNCH · {day.lunch.effort} · {day.lunch.servings} SERVINGS</small><strong>{day.lunch.servings ? day.lunch.title : 'Lunch off'}</strong><MealStatusControls status={lunchStatus} disabled={!day.lunch.recipeId} onChange={(status) => reconcileMeal(day, 'lunch', status)} /></div><div className={`meal-slot ${day.meal.tone}`}><small>DINNER · {day.meal.effort.toUpperCase()} · {day.meal.servings} SERVINGS</small><strong>{day.meal.title}</strong><MealStatusControls status={dinnerStatus} disabled={!day.meal.recipeId} onChange={(status) => reconcileMeal(day, 'dinner', status)} /></div>{index === 5 && <span className="shopping-chip">King Soopers</span>}</article>;
+        return <article className={day.isToday ? 'meal-day today' : 'meal-day'} key={day.date}><header><span>{day.dayLabel}</span><strong>{day.dateLabel}</strong></header><div className="meal-slot lunch-slot"><small>LUNCH · {day.lunch.effort} · {day.lunch.servings} SERVINGS</small><strong>{day.lunch.servings ? day.lunch.title : 'Lunch off'}</strong><MealStatusControls status={lunchStatus} disabled={!day.lunch.recipeId} onChange={(status) => reconcileMeal(day, 'lunch', status)} /></div><div className={`meal-slot ${day.meal.tone}`}><small>DINNER · {day.meal.effort.toUpperCase()} · {day.meal.servings} SERVINGS</small><strong>{day.meal.title}</strong><MealStatusControls status={dinnerStatus} disabled={!day.meal.recipeId} onChange={(status) => reconcileMeal(day, 'dinner', status)} /></div>{index === 5 && <span className="shopping-chip">King Soopers</span>}</article>;
       })}</div>
     </>}
-    {open && <div className="sheet-backdrop" onClick={() => setOpen(false)}><section className="schedule-sheet" role="dialog" aria-modal="true" aria-label={editing ? 'Edit schedule change' : 'Add schedule change'} onClick={(event) => event.stopPropagation()}><div className="sheet-handle"/><div className="sheet-heading"><div><p className="eyebrow">ONE-TIME EXCEPTION</p><h2>{editing ? 'Edit' : 'Add'} schedule change</h2></div><button aria-label="Close" onClick={() => setOpen(false)}>×</button></div><label>Who<select value={personId} onChange={(event) => setPersonId(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select></label><label>What changed<select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Date<div className="date-picks">{[week[0], week[1], week[5]].filter(Boolean).map(day => <button type="button" className={date === day.date ? 'active' : ''} key={day.date} onClick={() => setDate(day.date)}>{day.dayLabel}</button>)}</div><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label><label>Short note <small>optional</small><input value={note} onChange={(event) => setNote(event.target.value)} placeholder={kind === 'work_trip' ? 'e.g. Sacramento' : 'e.g. home by 8:30'} /></label><button className="save-schedule" onClick={save}>Save schedule change</button><p className="sheet-note">This updates lunch servings, dinner servings, and dinner effort immediately.</p></section></div>}
+    {open && <div className="sheet-backdrop" onClick={() => setOpen(false)}><section className="schedule-sheet" role="dialog" aria-modal="true" aria-label={editing ? 'Edit schedule change' : 'Add schedule change'} onClick={(event) => event.stopPropagation()}><div className="sheet-handle"/><div className="sheet-heading"><div><p className="eyebrow">ONE-TIME EXCEPTION</p><h2>{editing ? 'Edit' : 'Add'} schedule change</h2></div><button aria-label="Close" onClick={() => setOpen(false)}>×</button></div><label>Who<select value={personId} onChange={(event) => setPersonId(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select></label><label>What changed<select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Starts<div className="date-picks">{[week[0], week[1], week[5]].filter(Boolean).map(day => <button type="button" className={date === day.date ? 'active' : ''} key={day.date} onClick={() => { setDate(day.date); setEndDate(day.date); }}>{day.dayLabel}</button>)}</div><input type="date" value={date} onChange={(event) => { const next = event.target.value; setEndDate(endDate <= date ? next : endDate); setDate(next); }} /></label><label>Ends <small>use the same date for one day</small><input type="date" min={date} value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label><button type="button" className="range-shortcut" onClick={() => setEndDate(addLocalDays(date, 20))}>Set a 3-week trip</button><label>Short note <small>optional</small><input value={note} onChange={(event) => setNote(event.target.value)} placeholder={kind === 'work_trip' ? 'e.g. Sacramento' : 'e.g. home by 8:30'} /></label><button className="save-schedule" onClick={save}>Save schedule change</button><p className="sheet-note">One entry covers every day in the range and immediately updates lunch servings, dinner servings, and dinner effort.</p></section></div>}
   </section>;
 }
 

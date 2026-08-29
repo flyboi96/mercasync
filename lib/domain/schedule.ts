@@ -13,6 +13,7 @@ export type ScheduleException = {
   personId: PersonId;
   kind: ScheduleExceptionKind;
   date: string;
+  endDate?: string | null;
   title: string;
   location?: string | null;
   createdAt?: number;
@@ -66,12 +67,16 @@ const availabilityLabels: Record<ScheduleExceptionKind, string> = {
 const baseDinners = [
   { recipeId: 'miso-salmon-bowls', title: 'Miso salmon bowls', tone: 'sage', effort: 'Standard' as const },
   { recipeId: 'lemony-chicken-orzo', title: 'Lemony chicken orzo', tone: 'sun', effort: 'Standard' as const },
-  { recipeId: null, title: 'Leftovers', tone: 'clay', effort: 'Quick' as const },
+  { recipeId: 'sheet-pan-chicken-vegetables', title: 'Sheet-pan chicken & vegetables', tone: 'clay', effort: 'Standard' as const },
   { recipeId: 'harissa-turkey-pitas', title: 'Harissa turkey pitas', tone: 'blue', effort: 'Quick' as const },
   { recipeId: 'steak-taco-night', title: 'Steak taco night', tone: 'berry', effort: 'Relaxed' as const },
   { recipeId: null, title: 'Dinner out', tone: 'ink', effort: 'None' as const },
   { recipeId: 'ginger-chicken-soup', title: 'Ginger chicken soup', tone: 'sage', effort: 'Standard' as const },
 ];
+
+const dinnerPriority = [0, 1, 3, 4, 6, 2];
+
+const leftoversDinner = { recipeId: null, title: 'Leftovers', tone: 'clay', effort: 'Quick' as const };
 
 const baseLunches = [
   { recipeId: 'turkey-hummus-wrap', title: 'Turkey hummus wrap', effort: '5 min' as const },
@@ -119,7 +124,7 @@ function availabilityFor(
   exceptions: ScheduleException[],
 ): Availability {
   const matching = exceptions
-    .filter((exception) => exception.personId === personId && exception.date === date)
+    .filter((exception) => exception.personId === personId && scheduleExceptionApplies(exception, date))
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   const kind = matching.at(-1)?.kind || 'home';
   return {
@@ -128,6 +133,21 @@ function availabilityFor(
     isHome: kind !== 'away' && kind !== 'work_trip',
     isLate: kind === 'late_shift',
   };
+}
+
+export function scheduleExceptionApplies(exception: ScheduleException, date: string) {
+  return exception.date <= date && (exception.endDate || exception.date) >= date;
+}
+
+export function calendarMonthDays(anchor: string) {
+  const monthStart = `${anchor.slice(0, 7)}-01`;
+  const leadingDays = dateAtNoonUtc(monthStart).getUTCDay();
+  const gridStart = addLocalDays(monthStart, -leadingDays);
+  return Array.from({ length: 42 }, (_, index) => addLocalDays(gridStart, index));
+}
+
+export function calendarMonthLabel(anchor: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(dateAtNoonUtc(anchor));
 }
 
 function adaptDinner(
@@ -193,14 +213,23 @@ export function buildPlanningWeek(
   exceptions: ScheduleException[],
   now = new Date(),
   timeZone = 'America/Denver',
+  dinnerTarget = 5,
 ): PlanningDay[] {
   const today = localDateForTimeZone(now, timeZone);
   const start = planningWeekStart(today);
 
-  return baseDinners.map((baseDinner, index) => {
+  const availability = baseDinners.map((_, index) => {
     const date = addLocalDays(start, index);
-    const alex = availabilityFor('alex', date, exceptions);
-    const nathalia = availabilityFor('nathalia', date, exceptions);
+    return { date, alex: availabilityFor('alex', date, exceptions), nathalia: availabilityFor('nathalia', date, exceptions) };
+  });
+  const selectedDinners = new Set(dinnerPriority
+    .filter((index) => availability[index].alex.isHome || availability[index].nathalia.isHome)
+    .slice(0, Math.max(0, Math.min(6, dinnerTarget))));
+
+  return baseDinners.map((candidateDinner, index) => {
+    const date = addLocalDays(start, index);
+    const { alex, nathalia } = availability[index];
+    const baseDinner = index === 5 ? candidateDinner : selectedDinners.has(index) ? candidateDinner : leftoversDinner;
     const lunchDiners = people.filter((personId) => ({ alex, nathalia })[personId].isHome);
     const baseLunch = baseLunches[index];
     const displayDate = dateAtNoonUtc(date);

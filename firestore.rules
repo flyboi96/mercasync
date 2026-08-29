@@ -30,12 +30,15 @@ service cloud.firestore {
 
     function validScheduleExceptionFields(data) {
       return data.keys().hasOnly([
-          'personId', 'kind', 'date', 'title', 'location', 'createdBy', 'createdAt'
+          'personId', 'kind', 'date', 'endDate', 'title', 'location', 'createdBy', 'createdAt'
         ])
         && validPersonId(data.personId)
         && validExceptionKind(data.kind)
         && data.date is string
         && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (data.endDate == null || (data.endDate is string
+          && data.endDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+          && data.endDate >= data.date))
         && data.title is string
         && data.title.size() > 0
         && data.title.size() <= 120
@@ -59,6 +62,15 @@ service cloud.firestore {
         && data.sourceFingerprint is string
         && data.savedBy == request.auth.uid
         && data.savedAt == request.time;
+    }
+
+    function validPlanningSettings(data) {
+      return data.keys().hasOnly(['dinnerTarget', 'updatedBy', 'updatedAt'])
+        && data.dinnerTarget is int
+        && data.dinnerTarget >= 0
+        && data.dinnerTarget <= 6
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
     }
 
     function validRecipe(data) {
@@ -213,6 +225,14 @@ service cloud.firestore {
         allow create, update: if isHouseholdMember(householdId)
           && validMealPlan(request.resource.data)
           && request.resource.data.weekStart == weekStart;
+        allow delete: if false;
+      }
+
+      match /planningSettings/{settingsId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && settingsId == 'current'
+          && validPlanningSettings(request.resource.data);
         allow delete: if false;
       }
 

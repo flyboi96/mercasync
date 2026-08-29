@@ -24,7 +24,20 @@
 .event-actions button { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--green); background: #fff; font-size: 10px; font-weight: 800; cursor: pointer; }
 .event-actions button.danger { color: #9b4437; }
 .schedule-row.work-only { grid-template-columns: 62px 1fr; }
-.meal-calendar-row { position: relative; display: grid; grid-template-columns: 62px 1fr 1fr; gap: 12px; align-items: stretch; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.dinner-target { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; padding: 16px 18px; border: 1px solid #0f4c3a24; border-radius: 14px; background: #edf3ed; }
+.dinner-target strong, .dinner-target small { display: block; }
+.dinner-target strong { margin: 3px 0; font: 600 17px Georgia, serif; }
+.dinner-target small { color: var(--muted); font-size: 10px; }
+.stepper { display: grid; grid-template-columns: 44px 44px 44px; align-items: center; overflow: hidden; border: 1px solid #0f4c3a40; border-radius: 12px; background: #fff; }
+.stepper button { min-height: 44px; border: 0; color: var(--green); background: transparent; font-size: 22px; cursor: pointer; }
+.stepper button:disabled { color: #aeb7b1; cursor: default; }
+.stepper output { text-align: center; font-size: 18px; font-weight: 900; }
+.meal-week-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.meal-day { position: relative; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.meal-day.today { border: 2px solid var(--green); }
+.meal-day > header { display: flex; align-items: baseline; justify-content: space-between; padding: 4px 3px 9px; }
+.meal-day > header span { color: var(--muted); font-size: 9px; font-weight: 850; text-transform: uppercase; }
+.meal-day > header strong { font: 600 20px Georgia, serif; }
 .meal-slot { display: flex; flex-direction: column; justify-content: center; gap: 5px; min-height: 62px; padding: 11px; border-radius: 10px; }
 .meal-slot small { font-size: 7px; font-weight: 900; letter-spacing: .09em; opacity: .68; }
 .meal-slot strong { font: 600 12px/1.25 Georgia, serif; }
@@ -37,6 +50,21 @@
 .date-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .date-picks button { min-height: 40px; border: 1px solid var(--line); border-radius: 9px; color: var(--green); background: #fff; font-size: 10px; font-weight: 800; cursor: pointer; }
 .date-picks button.active { border-color: var(--green); color: #fff; background: var(--green); }
+.range-shortcut { width: 100%; min-height: 44px; border: 1px solid var(--coral); border-radius: 10px; color: #913d31; background: #fff3ef; font-weight: 850; cursor: pointer; }
+.work-month { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.work-month > header { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; padding: 8px; background: #edf3ed; }
+.work-month > header h2 { margin: 0; text-align: center; font: 600 20px Georgia, serif; }
+.work-month > header button { min-height: 44px; border: 0; border-radius: 10px; color: var(--green); background: #fff; font-size: 26px; cursor: pointer; }
+.month-weekdays, .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.month-weekdays span { padding: 9px 4px; color: var(--muted); text-align: center; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.month-grid > button { min-width: 0; min-height: 92px; padding: 7px; border: 0; border-top: 1px solid var(--line); border-right: 1px solid var(--line); color: var(--ink); text-align: left; background: #fff; cursor: pointer; }
+.month-grid > button:nth-child(7n) { border-right: 0; }
+.month-grid > button.outside { color: #9ca49f; background: #faf9f5; }
+.month-grid > button.today > strong { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; color: #fff; background: var(--green); }
+.month-events { display: grid; gap: 3px; margin-top: 5px; }
+.month-events i { overflow: hidden; padding: 3px 4px; border-radius: 4px; font-size: 8px; font-style: normal; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.month-events i.alex { color: #174e75; background: #dcecf7; }
+.month-events i.nathalia { color: #7a3026; background: #f8dfda; }
 
 .calendar-page { display: grid; gap: 14px; }
 .calendar-actions {
@@ -168,9 +196,9 @@
   .sheet-backdrop { padding: 0; }
   .schedule-sheet { padding: 12px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
   .version-badge { margin-left: 0; }
-  .meal-calendar-row { grid-template-columns: 42px 1fr; gap: 8px; }
-  .meal-calendar-row .schedule-date { grid-row: 1 / 3; align-self: center; }
-  .meal-slot { grid-column: 2; min-height: 58px; }
+  .meal-week-calendar { grid-template-columns: repeat(7, 218px); margin-right: -16px; overflow-x: auto; padding: 2px 16px 12px 0; scroll-snap-type: x mandatory; }
+  .meal-day { scroll-snap-align: start; }
+  .meal-slot { min-height: 58px; }
 }
 
 /* Phone UX: readable at arm's length, thumb-sized, and vertically scannable. */
@@ -239,7 +267,18 @@
   .schedule-people p { grid-template-columns: 28px 1fr; column-gap: 8px; }
   .schedule-people strong { font-size: 14px; }
   .schedule-people small { font-size: 13px; line-height: 1.35; }
-  .meal-calendar-row { grid-template-columns: 48px 1fr; gap: 10px; padding: 15px 13px; }
+  .dinner-target { align-items: flex-start; padding: 16px; }
+  .dinner-target strong { font-size: 19px; }
+  .dinner-target small { max-width: 180px; font-size: 13px; line-height: 1.35; }
+  .stepper { flex: none; grid-template-columns: 44px 42px 44px; }
+  .month-weekdays span { font-size: 11px; }
+  .month-grid > button { min-height: 72px; padding: 5px; }
+  .month-grid > button > strong { font-size: 14px; }
+  .month-events i { font-size: 0; }
+  .month-events i::first-letter { font-size: 10px; }
+  .meal-day { padding: 11px; }
+  .meal-day > header span { font-size: 13px; }
+  .meal-day > header strong { font-size: 27px; }
   .meal-slot { min-height: 72px; padding: 13px; }
   .meal-slot small { font-size: 12px; line-height: 1.35; }
   .meal-slot strong { font-size: 16px; line-height: 1.3; }

@@ -27,6 +27,7 @@ export type CreateScheduleException = {
   personId: PersonId;
   kind: ScheduleExceptionKind;
   date: string;
+  endDate?: string | null;
   title: string;
   location?: string | null;
 };
@@ -40,6 +41,7 @@ function mapFirestoreException(
     personId: data.personId,
     kind: data.kind,
     date: data.date,
+    endDate: data.endDate || null,
     title: data.title,
     location: data.location || null,
     createdAt: data.createdAt?.toMillis?.(),
@@ -107,6 +109,7 @@ export async function createScheduleException(
       ),
       {
         ...input,
+        endDate: input.endDate || null,
         location: input.location || null,
         createdBy: auth.currentUser.uid,
         createdAt: serverTimestamp(),
@@ -133,6 +136,7 @@ export async function updateScheduleException(
   const { db } = getFirebaseServices();
   await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'scheduleExceptions', id), {
     ...input,
+    endDate: input.endDate || null,
     location: input.location || null,
   });
 }

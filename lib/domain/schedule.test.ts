@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildPlanningWeek,
+  calendarMonthDays,
   localDateForTimeZone,
   planningWeekLabel,
   planningWeekStart,
@@ -34,6 +35,13 @@ describe('schedule planning dates', () => {
       '2026-09-06',
     ]);
     expect(planningWeekLabel(week)).toBe('Aug 31 – Sep 6');
+  });
+
+  it('builds a six-row Sunday-first month grid', () => {
+    const days = calendarMonthDays('2026-09-15');
+    expect(days).toHaveLength(42);
+    expect(days[0]).toBe('2026-08-30');
+    expect(days[41]).toBe('2026-10-10');
   });
 });
 
@@ -104,5 +112,20 @@ describe('schedule-to-dinner rules', () => {
     )[0];
     expect(monday.alex.label).toBe('Home');
     expect(monday.meal.servings).toBe(2);
+  });
+
+  it('applies one work-trip exception across a three-week date range', () => {
+    const week = buildPlanningWeek([
+      exception({ personId: 'nathalia', kind: 'work_trip', date: '2026-08-20', endDate: '2026-09-10' }),
+    ], friday);
+    expect(week.every((day) => day.nathalia.label === 'Work trip')).toBe(true);
+    expect(week.every((day) => day.lunch.servings === 1)).toBe(true);
+  });
+
+  it('changes the number of recipe dinners without changing the seven-day calendar', () => {
+    const week = buildPlanningWeek([], friday, 'America/Denver', 3);
+    expect(week).toHaveLength(7);
+    expect(week.filter((day) => day.meal.recipeId).length).toBe(3);
+    expect(week.filter((day) => day.meal.title === 'Leftovers').length).toBe(3);
   });
 });

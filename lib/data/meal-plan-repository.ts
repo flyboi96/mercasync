@@ -34,3 +34,29 @@ export async function saveMealPlan(week: PlanningDay[], householdId?: string) {
     savedAt: serverTimestamp(),
   });
 }
+
+export function subscribeToDinnerTarget(
+  householdId: string | undefined,
+  onChange: (target: number) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  if (!usesFirebaseBackend()) return () => undefined;
+  const { db } = getFirebaseServices();
+  return onSnapshot(
+    doc(db, 'households', householdId || firebaseHouseholdId(), 'planningSettings', 'current'),
+    (snapshot) => onChange(snapshot.exists() ? snapshot.data().dinnerTarget : 5),
+    onError,
+  );
+}
+
+export async function saveDinnerTarget(target: number, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  if (!Number.isInteger(target) || target < 0 || target > 6) throw new Error('Dinner target must be between zero and six.');
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before changing the dinner target.');
+  await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'planningSettings', 'current'), {
+    dinnerTarget: target,
+    updatedBy: auth.currentUser.uid,
+    updatedAt: serverTimestamp(),
+  });
+}
