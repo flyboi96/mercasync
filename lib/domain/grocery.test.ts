@@ -22,12 +22,19 @@ describe('deterministic grocery calculation', () => {
     expect(normal.find((need) => need.itemId === 'salmon')?.quantity).toBe(1);
   });
 
-  it('reduces recurring breakfast needs while Alex is away', () => {
+  it('keeps household recurring items independent from one person’s trip', () => {
     const trip: ScheduleException = { id: 'trip', personId: 'alex', kind: 'work_trip', date: '2026-08-31', title: 'Work trip' };
     const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES);
     const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES);
     expect(normal.find((need) => need.itemId === 'eggs')?.quantity).toBe(14);
-    expect(adjusted.find((need) => need.itemId === 'eggs')?.quantity).toBe(12);
+    expect(adjusted.find((need) => need.itemId === 'eggs')?.quantity).toBe(14);
+  });
+
+  it('adds recurring recipe ingredients at the selected weekly frequency and servings', () => {
+    const recurring = [{ id: 'wrap-habit', name: 'Wrap habit', kind: 'recipe' as const, recipeId: 'turkey-hummus-wrap', servings: 2, timesPerWeek: 3 }];
+    const baseline = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [], friday, []);
+    const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [], friday, recurring);
+    expect((needs.find((need) => need.itemId === 'deli-turkey')?.quantity || 0) - (baseline.find((need) => need.itemId === 'deli-turkey')?.quantity || 0)).toBe(24);
   });
 
   it('subtracts compatible inventory estimates and removes fully covered needs', () => {

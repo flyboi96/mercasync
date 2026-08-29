@@ -1,20 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { RECURRING_PROFILES, recurringProfileOccurrences } from './recurring-consumption';
-import { buildPlanningWeek } from './schedule';
-
-const friday = new Date('2026-08-28T18:00:00Z');
+import { RECURRING_FOODS, recurringFoodOccurrences } from './recurring-consumption';
 
 describe('recurring consumption', () => {
-  it('applies a home routine on every normal day', () => {
-    expect(recurringProfileOccurrences(RECURRING_PROFILES[0], buildPlanningWeek([], friday))).toBe(7);
+  it('uses the household weekly frequency', () => {
+    expect(recurringFoodOccurrences({ ...RECURRING_FOODS[0], timesPerWeek: 4 })).toBe(4);
   });
 
-  it('skips a routine while its person is away', () => {
-    const week = buildPlanningWeek([{ id: 'trip', personId: 'alex', kind: 'work_trip', date: '2026-08-31', title: 'Trip' }], friday);
-    expect(recurringProfileOccurrences(RECURRING_PROFILES[0], week)).toBe(6);
+  it('caps frequency at three times per day', () => {
+    expect(recurringFoodOccurrences({ ...RECURRING_FOODS[0], timesPerWeek: 30 })).toBe(21);
   });
 
   it('does not consume a routine that the household paused', () => {
-    expect(recurringProfileOccurrences({ ...RECURRING_PROFILES[0], enabled: false }, buildPlanningWeek([], friday))).toBe(0);
+    expect(recurringFoodOccurrences({ ...RECURRING_FOODS[0], enabled: false })).toBe(0);
   });
 });

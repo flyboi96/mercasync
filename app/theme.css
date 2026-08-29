@@ -465,6 +465,21 @@
 .shopping-check small { display: block; color: #6e746d; line-height: 1.35; }
 .move-store { width: 94px; border: 0; border-left: 1px solid #e2ddcf; background: #f5f0e5; color: #21643c; font-size: 11px; font-weight: 800; }
 .grocery-adder .creator-grid { grid-template-columns: 1fr 1fr; }
+.recurring-row { width: 100%; border: 0; text-align: left; cursor: pointer; }
+.recurring-kind { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #e5efe6; color: var(--green); font-weight: 900; }
+.add-recurring-inline { width: 100%; min-height: 45px; margin-top: 8px; border: 1px dashed #99aa9d; border-radius: 12px; background: transparent; color: var(--green); font-weight: 850; }
+.sheet-intro { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.recurring-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; max-height: 180px; overflow-y: auto; margin-bottom: 14px; }
+.recurring-picker button { display: grid; gap: 2px; min-height: 54px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--ink); text-align: left; }
+.recurring-picker button.active { border-color: var(--green); background: #edf3ed; }
+.recurring-picker button.add { place-items: center; border-style: dashed; color: var(--green); font-weight: 850; }
+.recurring-picker small { color: var(--muted); }
+.recurring-types { grid-template-columns: 1fr 1fr; }
+.recurring-item-grid { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 9px; }
+.weekly-frequency { display: flex !important; align-items: center; justify-content: space-between; gap: 14px !important; margin: 14px 0 !important; padding: 13px; border-radius: 13px; background: #f5f1e7; text-transform: none !important; }
+.weekly-frequency span { display: grid; gap: 3px; }
+.weekly-frequency small { color: var(--muted); }
+.delete-recurring { width: 100%; min-height: 46px; border: 0; background: transparent; color: #a53d32; font-weight: 800; }
 
 @media (max-width: 720px) {
   .meal-action-backdrop { place-items: end center; padding: 0; }
@@ -475,4 +490,6 @@
   .shopping-date input { width: 100%; font-size: 16px; }
   .shopping-item-row { grid-template-columns: 1fr 78px; }
   .move-store { width: 78px; }
+  .recurring-item-grid { grid-template-columns: 1fr 1fr; }
+  .recurring-item-grid label:last-child { grid-column: 1 / -1; }
 }

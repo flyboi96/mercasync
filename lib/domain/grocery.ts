@@ -1,7 +1,7 @@
 import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
 import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
-import { RECURRING_PROFILES, recurringProfileOccurrences, type RecurringConsumptionProfile } from './recurring-consumption';
+import { RECURRING_FOODS, recurringFoodOccurrences, type RecurringFood } from './recurring-consumption';
 
 export type GroceryNeed = {
   id: string;
@@ -49,7 +49,7 @@ export function buildGroceryNeeds(
   recipes: Recipe[],
   inventory: InventoryItem[] = [],
   now = new Date(),
-  recurringProfiles: RecurringConsumptionProfile[] = RECURRING_PROFILES,
+  recurringFoods: RecurringFood[] = RECURRING_FOODS,
 ): GroceryNeed[] {
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const requirements = new Map<string, GroceryNeed & { required: number }>();
@@ -81,9 +81,15 @@ export function buildGroceryNeeds(
     }
   }
 
-  for (const profile of recurringProfiles) {
-    const occurrences = recurringProfileOccurrences(profile, week);
-    for (const ingredient of profile.ingredients) addRequirement(ingredient, occurrences, profile.name);
+  for (const food of recurringFoods) {
+    const occurrences = recurringFoodOccurrences(food);
+    if (food.kind === 'item' && food.ingredient) addRequirement(food.ingredient, occurrences, food.name);
+    if (food.kind === 'recipe' && food.recipeId) {
+      const recipe = recipesById.get(food.recipeId);
+      if (!recipe) continue;
+      const scale = occurrences * Math.max(1, food.servings || recipe.servings) / recipe.servings;
+      for (const ingredient of recipe.ingredients) addRequirement(ingredient, scale, `${food.name} · recurring`);
+    }
   }
 
   const inventoryRemaining = new Map(

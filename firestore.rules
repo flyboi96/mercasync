@@ -89,6 +89,23 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function validRecurringFood(data) {
+      return data.keys().hasOnly(['name', 'kind', 'timesPerWeek', 'enabled', 'recipeId', 'servings', 'ingredient', 'updatedBy', 'updatedAt'])
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 120
+        && (data.kind == 'recipe' || data.kind == 'item')
+        && data.timesPerWeek is int
+        && data.timesPerWeek >= 0
+        && data.timesPerWeek <= 21
+        && data.enabled is bool
+        && (data.recipeId == null || data.recipeId is string)
+        && (data.servings == null || (data.servings is int && data.servings >= 1 && data.servings <= 12))
+        && (data.ingredient == null || data.ingredient is map)
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
     function validMealOverride(data) {
       return data.keys().hasOnly(['date', 'kind', 'recipeId', 'servings', 'updatedBy', 'updatedAt'])
         && data.date is string
@@ -275,6 +292,13 @@ service cloud.firestore {
         allow create, update: if isHouseholdMember(householdId)
           && validRecurringProfile(request.resource.data);
         allow delete: if false;
+      }
+
+      match /recurringFoods/{foodId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validRecurringFood(request.resource.data);
+        allow delete: if isHouseholdMember(householdId);
       }
 
       match /mealOverrides/{date} {
