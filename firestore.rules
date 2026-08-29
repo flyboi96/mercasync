@@ -65,10 +65,11 @@ service cloud.firestore {
     }
 
     function validPlanningSettings(data) {
-      return data.keys().hasOnly(['dinnerTarget', 'updatedBy', 'updatedAt'])
+      return data.keys().hasOnly(['dinnerTarget', 'costcoThisWeek', 'updatedBy', 'updatedAt'])
         && data.dinnerTarget is int
         && data.dinnerTarget >= 0
         && data.dinnerTarget <= 6
+        && data.costcoThisWeek is bool
         && data.updatedBy == request.auth.uid
         && data.updatedAt == request.time;
     }
