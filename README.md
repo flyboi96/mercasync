@@ -17,6 +17,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Explainable recipe ranking using ratings, favorites, recent history, schedule fit, pantry coverage, and variety
 - Approved meal plans stay stable while shopping; schedule or preference changes intentionally reopen planning
 - Shared biweekly Costco switch that routes immediate needs to King Soopers on off weeks
+- Bulk-aware store optimization using projected demand, real package sizes, shelf life, and freezer suitability
+- Shared editing for Alex's breakfast and Nathalia's snack quantities, including pause controls
+- Real inventory creation for foods already at home
 - Recipe favorites, ratings, notes, and history surface
 - Shared inventory estimates with confirmation dates and automatic confidence decay
 - One-tap inventory corrections with an exact quantity fallback

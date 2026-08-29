@@ -70,6 +70,15 @@ households/{householdId}/planningSettings/current
   costcoThisWeek
   updatedBy
   updatedAt
+
+households/{householdId}/recurringProfiles/{profileId}
+  personId: alex | nathalia
+  name
+  enabled
+  condition: home
+  ingredients: [normalized ingredient and per-home-day quantity]
+  updatedBy
+  updatedAt
 ```
 
 Firestore rules authorize reads and writes by checking the signed-in UID against the household's `memberIds`. Clients cannot add themselves to a household or change membership.
@@ -82,7 +91,7 @@ Normal days mean both people are home. Exceptions override that baseline for one
 
 Recipe selection is deterministic and explainable. The planner scores shared dinner recipes using ratings, favorites, late-night suitability, recent cooking, pantry coverage, and cuisine/protein/method variety. A Weekend Reset uses current inventory to generate a draft, then saves an approved plan. The approved plan remains stable while purchases change inventory; schedule, dinner-count, or recipe-preference changes invalidate it and produce a new draft.
 
-The shared Costco-week setting represents the household's biweekly cadence without a paid scheduler. During Costco weeks, bulk-designated ingredients remain on the Costco list. During off weeks, immediate requirements are routed to King Soopers so the weekly plan never depends on a skipped bulk run.
+The shared Costco-week setting represents the household's biweekly cadence without a paid scheduler. Store assignment is calculated after recipe, routine, and inventory deltas. Costco is selected only when projected demand uses enough of a known bulk package and the product is shelf-stable, keeps for at least two weeks, or freezes well. Shelf-stable goods may justify a lower two-week package share than refrigerated food. During off weeks, immediate requirements route to King Soopers so the weekly plan never depends on a skipped bulk run. Every grocery row explains its assignment.
 
 ## Grocery and inventory reconciliation
 
@@ -94,7 +103,7 @@ Inventory quantity corrections are shared Firestore updates. The quick controls 
 
 Meal confirmation is stored separately from the generated plan. Marking a recipe-backed lunch or dinner cooked atomically subtracts its serving-scaled ingredients and records confirmed consumption. Marking it skipped preserves inventory; undoing cooked status restores the exact stored deductions.
 
-Recurring consumption is deterministic domain data in this slice: Alex's breakfast and Nathalia's snack profile are multiplied by the number of days each person is home. Schedule exceptions therefore change both recurring grocery quantities and the visible weekly occurrence counts. Profile editing remains a later Firestore migration.
+Recurring consumption is shared Firestore data: Alex's breakfast and Nathalia's snack profile quantities are multiplied by the number of days each person is home. Each routine can be paused or edited, and schedule exceptions therefore change both recurring grocery quantities and visible weekly occurrence counts.
 
 ## Static GitHub Pages deployment
 

@@ -57,8 +57,7 @@ Added after the original audit:
   subtract serving-scaled ingredients, while undo restores those deductions.
 - Alex's breakfast and Nathalia's snack profile now contribute to grocery needs
   only on days each person is home.
-- Recurring-profile editing, adding arbitrary inventory items, and scheduled
-  automation remain incomplete.
+- Scheduled background automation remains incomplete; the Weekend Reset supplies the reliable free-hosting workflow in the meantime.
 
 ## Version 0.11 planning update
 
@@ -76,6 +75,13 @@ Added after the original audit:
 - Approved plans are frozen against routine inventory and purchase updates. Schedule, dinner-count, and recipe-preference changes deliberately invalidate approval and produce a fresh draft.
 - Costco cadence is a shared household setting. Costco ingredients stay at Costco during a run week and move to King Soopers during an off week so immediate needs remain purchasable.
 - Planner ranking, approval invalidation, and store-cadence behavior are covered by domain tests.
+
+## Version 0.13 household reality update
+
+- Store assignment is no longer copied from a recipe ingredient. A policy engine compares two-week demand with known Costco package sizes, shelf life, and freezer suitability.
+- Costco purchases round up to an actual bulk package and explain why the package is economical. Small or perishable requirements remain at King Soopers, and all urgent items route there during off weeks.
+- Alex's home breakfast and Nathalia's snacks now load from shared Firestore profiles. Either routine can be paused, and each ingredient's per-home-day amount is editable from the Plan screen.
+- The Inventory screen can create arbitrary shared items with a quantity and unit. New observations begin at 100% confidence and immediately participate in grocery subtraction when their normalized item and unit match a requirement.
 
 ## Migration boundary
 
