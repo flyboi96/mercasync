@@ -8,7 +8,9 @@ import {
   updateScheduleException,
 } from '@/lib/data/schedule-repository';
 import { saveMealPlan, subscribeToSavedMealPlan } from '@/lib/data/meal-plan-repository';
+import { subscribeToRecipes, updateRecipePreferences } from '@/lib/data/recipe-repository';
 import { mealPlanFingerprint } from '@/lib/domain/meal-plan';
+import { STARTER_RECIPES, type MealType, type Recipe } from '@/lib/domain/recipe';
 import {
   buildPlanningWeek,
   formatLongDate,
@@ -38,18 +40,13 @@ const fallbackInventory: Inventory[] = [
   { name: 'Jasmine rice', qty: '4.2 lb', confidence: 92 }, { name: 'Eggs', qty: '8', confidence: 78 },
   { name: 'Greek yogurt', qty: '~1 cup', confidence: 34 }, { name: 'Frozen berries', qty: '~3 cups', confidence: 66 },
 ];
-const recipes = [
-  { name: 'Miso salmon bowls', meta: '25 min · Japanese-inspired', rating: 5, note: 'Alex: extra cucumber next time', color: 'sage' },
-  { name: 'Lemony chicken orzo', meta: '30 min · One pan', rating: 4, note: 'Great late-shift dinner', color: 'sun' },
-  { name: 'Harissa turkey pitas', meta: '20 min · Mediterranean', rating: 5, note: 'Nathalia favorite', color: 'blue' },
-  { name: 'Steak taco night', meta: '35 min · Fun dinner', rating: 5, note: 'Keep the charred salsa', color: 'berry' },
-];
 const nav = [{ label: 'Plan', icon: '⌂' }, { label: 'Calendar', icon: '□' }, { label: 'Recipes', icon: '◇' }, { label: 'Inventory', icon: '◫' }, { label: 'Groceries', icon: '✓' }];
 
 export default function Home() {
   const [active, setActive] = useState('Plan');
   const [items, setItems] = useState<Grocery[]>(fallbackGroceries);
   const [inventory, setInventory] = useState<Inventory[]>(fallbackInventory);
+  const [recipeItems, setRecipeItems] = useState<Recipe[]>(STARTER_RECIPES);
   const [events, setEvents] = useState<ScheduleException[]>([]);
   const [store, setStore] = useState<'King Soopers' | 'Costco'>('King Soopers');
   const [toast, setToast] = useState('');
@@ -87,6 +84,14 @@ export default function Home() {
       () => notify('Could not load the shared meal plan.'),
     );
   }, [auth.session, firebaseEnabled, notify, week]);
+  useEffect(() => {
+    if (firebaseEnabled && !auth.session) return;
+    return subscribeToRecipes(
+      auth.session?.householdId,
+      setRecipeItems,
+      () => notify('Could not load the shared recipe library.'),
+    );
+  }, [auth.session, firebaseEnabled, notify]);
   const persistPlan = async () => {
     setSavingPlan(true);
     try {
@@ -122,7 +127,7 @@ export default function Home() {
       <header className="topbar"><div><p className="eyebrow">{formatLongDate()}</p><h1>{title}</h1><p>{active === 'Plan' ? 'Lunch and dinner, balanced around who’s home.' : 'Shared, current, and ready for both of you.'}</p></div>{active === 'Plan' && <button className={planIsSaved ? 'primary-button saved' : 'primary-button'} onClick={persistPlan} disabled={savingPlan || planIsSaved}><span>{planIsSaved ? '✓' : '↑'}</span> {savingPlan ? 'Saving…' : planIsSaved ? 'Plan saved' : savedPlanFingerprint ? 'Save update' : 'Save plan'}</button>}</header>
       {active === 'Plan' && <PlanView items={items} inventory={inventory} week={week} open={setActive} />}
       {active === 'Calendar' && <CalendarView events={events} week={week} householdId={auth.session?.householdId} onChanged={(changed) => setEvents((current) => [...current.filter((event) => event.id !== changed.id), changed].sort((a, b) => a.date.localeCompare(b.date)))} onDeleted={(id) => setEvents((current) => current.filter((event) => event.id !== id))} notify={notify} />}
-      {active === 'Recipes' && <RecipesView notify={notify} />}
+      {active === 'Recipes' && <RecipesView recipes={recipeItems} householdId={auth.session?.householdId} onUpdated={(updated) => setRecipeItems((current) => current.map((recipe) => recipe.id === updated.id ? updated : recipe))} notify={notify} />}
       {active === 'Inventory' && <InventoryView inventory={inventory} notify={notify} />}
       {active === 'Groceries' && <GroceriesView items={items} store={store} setStore={setStore} toggle={toggleItem} />}
     </section>
@@ -210,6 +215,42 @@ function SignInView({ error }: { error: string }) {
   };
   return <main className="auth-shell"><form className="auth-card" onSubmit={submit}><div className="brand"><span className="brand-mark">M</span><span>MercaSync</span><small className="version-badge">v{APP_VERSION}</small></div><p className="eyebrow">PRIVATE HOUSEHOLD</p><h1>Welcome home</h1><p>Sign in as Alex or Nathalia to open the shared plan.</p><label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>{message && <p className="auth-error" role="alert">{message}</p>}<button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button></form></main>;
 }
-function RecipesView({ notify }: { notify: (message: string) => void }) { const [stars, setStars] = useState<string[]>(['Miso salmon bowls', 'Harissa turkey pitas']); return <section className="recipe-grid">{recipes.map((recipe) => <article className="recipe-card" key={recipe.name}><div className={`recipe-swatch ${recipe.color}`}><button aria-label={`Star ${recipe.name}`} onClick={() => { setStars(s => s.includes(recipe.name) ? s.filter(x => x !== recipe.name) : [...s, recipe.name]); notify(stars.includes(recipe.name) ? 'Removed from favorites' : 'Saved as a favorite'); }}>{stars.includes(recipe.name) ? '★' : '☆'}</button><span>Cooked 2 weeks ago</span></div><div className="recipe-body"><p className="stars">{'★'.repeat(recipe.rating)}<span>{'★'.repeat(5 - recipe.rating)}</span></p><h2>{recipe.name}</h2><p>{recipe.meta}</p><small>{recipe.note}</small><button onClick={() => notify('Recipe detail is next in development.')}>Open recipe</button></div></article>)}</section>; }
+function RecipesView({ recipes, householdId, onUpdated, notify }: { recipes: Recipe[]; householdId?: string; onUpdated: (recipe: Recipe) => void; notify: (message: string) => void }) {
+  const [query, setQuery] = useState('');
+  const [mealType, setMealType] = useState<'all' | MealType>('all');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const selected = recipes.find((recipe) => recipe.id === selectedId) || null;
+  const visible = recipes.filter((recipe) => {
+    const matchesType = mealType === 'all' || recipe.mealType === mealType;
+    const haystack = `${recipe.name} ${recipe.cuisine} ${recipe.protein} ${recipe.tags.join(' ')}`.toLowerCase();
+    return matchesType && haystack.includes(query.trim().toLowerCase());
+  });
+  const updatePreference = async (recipe: Recipe, changes: Partial<Pick<Recipe, 'favorite' | 'rating' | 'note'>>, message: string) => {
+    const updated = { ...recipe, ...changes };
+    onUpdated(updated);
+    try {
+      await updateRecipePreferences(recipe.id, changes, householdId);
+      notify(message);
+    } catch {
+      onUpdated(recipe);
+      notify('Could not save that recipe change.');
+    }
+  };
+  const openRecipe = (recipe: Recipe) => {
+    setSelectedId(recipe.id);
+    setNoteDraft(recipe.note);
+  };
+  return <section className="recipes-page">
+    <div className="recipe-tools">
+      <label><span>Search recipes</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Chicken, fish, fast…" /></label>
+      <div className="recipe-filters" role="tablist" aria-label="Recipe meal type">{(['all', 'dinner', 'lunch'] as const).map((value) => <button key={value} className={mealType === value ? 'active' : ''} onClick={() => setMealType(value)} role="tab" aria-selected={mealType === value}>{value === 'all' ? 'All' : value === 'dinner' ? 'Dinners' : 'Fast lunches'}</button>)}</div>
+    </div>
+    <p className="recipe-count">{visible.length} shared {visible.length === 1 ? 'recipe' : 'recipes'} · favorites, ratings, and notes sync for both of you</p>
+    <div className="recipe-grid">{visible.map((recipe) => <article className="recipe-card" key={recipe.id}><div className={`recipe-swatch ${recipe.color}`}><button aria-label={`${recipe.favorite ? 'Unstar' : 'Star'} ${recipe.name}`} onClick={() => updatePreference(recipe, { favorite: !recipe.favorite }, recipe.favorite ? 'Removed from favorites' : 'Saved as a favorite')}>{recipe.favorite ? '★' : '☆'}</button><span>{recipe.mealType === 'lunch' ? 'FAST LUNCH' : recipe.lateNightSuitable ? 'LATE-NIGHT READY' : recipe.method.toUpperCase()}</span></div><div className="recipe-body"><p className="stars" aria-label={`${recipe.rating} out of 5 stars`}>{'★'.repeat(recipe.rating)}<span>{'★'.repeat(5 - recipe.rating)}</span></p><h2>{recipe.name}</h2><p>{recipe.effortMinutes} min · {recipe.cuisine} · serves {recipe.servings}</p><small>{recipe.note || recipe.description}</small><button onClick={() => openRecipe(recipe)}>Ingredients & steps</button></div></article>)}</div>
+    {visible.length === 0 && <div className="empty-recipes"><strong>No matching recipes</strong><p>Try a protein, cuisine, or “fast.”</p></div>}
+    {selected && <div className="sheet-backdrop recipe-detail-backdrop" onClick={() => setSelectedId(null)}><section className="recipe-detail" role="dialog" aria-modal="true" aria-label={selected.name} onClick={(event) => event.stopPropagation()}><div className="sheet-handle"/><div className="sheet-heading"><div><p className="eyebrow">{selected.mealType.toUpperCase()} · {selected.effortMinutes} MIN · SERVES {selected.servings}</p><h2>{selected.name}</h2></div><button aria-label="Close recipe" onClick={() => setSelectedId(null)}>×</button></div><p className="recipe-description">{selected.description}</p><div className="recipe-tags">{selected.tags.map((tag) => <span key={tag}>{tag}</span>)}</div><div className="recipe-detail-grid"><section><h3>Ingredients</h3><ul>{selected.ingredients.map((item) => <li key={`${item.itemId}-${item.unit}`}><span>{item.name}</span><strong>{item.quantity} {item.unit}</strong></li>)}</ul></section><section><h3>Steps</h3><ol>{selected.instructions.map((instruction, index) => <li key={instruction}><span>{index + 1}</span>{instruction}</li>)}</ol></section></div><section className="recipe-preferences"><div><strong>Your shared rating</strong><div className="rating-buttons">{[1, 2, 3, 4, 5].map((rating) => <button key={rating} aria-label={`Rate ${rating} stars`} className={rating <= selected.rating ? 'active' : ''} onClick={() => updatePreference(selected, { rating }, `Rated ${rating} stars`)}>★</button>)}</div></div><label>Shared note<textarea value={noteDraft} maxLength={500} onChange={(event) => setNoteDraft(event.target.value)} placeholder="What should we remember next time?" /></label><button className="save-recipe-note" onClick={() => updatePreference(selected, { note: noteDraft.trim() }, 'Recipe note saved')}>Save note</button></section></section></div>}
+  </section>;
+}
 function InventoryView({ inventory, notify }: { inventory: Inventory[]; notify: (message: string) => void }) { return <section className="inventory-page"><div className="confidence-key"><span className="pulse" />Confidence falls gradually when planned meals aren’t confirmed.</div>{inventory.map(item => <article className="inventory-card" key={item.name}><div><strong>{item.name}</strong><small>{item.qty}</small></div><div className="confidence"><span style={{ width: `${item.confidence}%` }} /><small>{item.confidence}% sure</small></div><button onClick={() => notify(`${item.name} confirmed.`)}>Confirm</button></article>)}<button className="add-button" onClick={() => notify('Inventory editing is next in development.')}>＋ Add an item</button></section>; }
 function GroceriesView({ items, store, setStore, toggle }: { items: Grocery[]; store: 'King Soopers' | 'Costco'; setStore: (store: 'King Soopers' | 'Costco') => void; toggle: (id: string) => void }) { const visible = items.filter(item => item.store === store); return <section className="groceries-page"><div className="store-tabs"><button className={store === 'King Soopers' ? 'active' : ''} onClick={() => setStore('King Soopers')}>King Soopers <span>{items.filter(i => i.store === 'King Soopers' && !i.checked).length}</span></button><button className={store === 'Costco' ? 'active' : ''} onClick={() => setStore('Costco')}>Costco <span>{items.filter(i => i.store === 'Costco' && !i.checked).length}</span></button></div><div className="list-summary"><div><p className="eyebrow">{store === 'Costco' ? 'BIWEEKLY · SEP 1–3' : 'WEEKLY · SATURDAY'}</p><h2>{store}</h2></div><p>{visible.filter(i => !i.checked).length} left</p></div><div className="shopping-list">{visible.map(item => <button className={item.checked ? 'shopping-item checked' : 'shopping-item'} key={item.id} onClick={() => toggle(item.id)}><span className="big-check">✓</span><span><strong>{item.name}</strong><small>{item.detail}</small></span></button>)}</div><div className="auto-note"><span className="pulse" /><p><strong>Built automatically</strong><br/>Recipes + routines − estimated inventory</p></div></section>; }
