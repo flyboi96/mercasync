@@ -35,12 +35,14 @@ export type PlanningDay = {
   alex: Availability;
   nathalia: Availability;
   lunch: {
+    recipeId: string | null;
     title: string;
     servings: number;
     effort: '5 min' | '10 min';
     rationale: string;
   };
   meal: {
+    recipeId: string | null;
     title: string;
     tone: string;
     servings: number;
@@ -62,23 +64,23 @@ const availabilityLabels: Record<ScheduleExceptionKind, string> = {
 };
 
 const baseDinners = [
-  { title: 'Miso salmon bowls', tone: 'sage', effort: 'Standard' as const },
-  { title: 'Lemony chicken orzo', tone: 'sun', effort: 'Standard' as const },
-  { title: 'Leftovers', tone: 'clay', effort: 'Quick' as const },
-  { title: 'Harissa turkey pitas', tone: 'blue', effort: 'Quick' as const },
-  { title: 'Steak taco night', tone: 'berry', effort: 'Relaxed' as const },
-  { title: 'Dinner out', tone: 'ink', effort: 'None' as const },
-  { title: 'Ginger chicken soup', tone: 'sage', effort: 'Standard' as const },
+  { recipeId: 'miso-salmon-bowls', title: 'Miso salmon bowls', tone: 'sage', effort: 'Standard' as const },
+  { recipeId: 'lemony-chicken-orzo', title: 'Lemony chicken orzo', tone: 'sun', effort: 'Standard' as const },
+  { recipeId: null, title: 'Leftovers', tone: 'clay', effort: 'Quick' as const },
+  { recipeId: 'harissa-turkey-pitas', title: 'Harissa turkey pitas', tone: 'blue', effort: 'Quick' as const },
+  { recipeId: 'steak-taco-night', title: 'Steak taco night', tone: 'berry', effort: 'Relaxed' as const },
+  { recipeId: null, title: 'Dinner out', tone: 'ink', effort: 'None' as const },
+  { recipeId: 'ginger-chicken-soup', title: 'Ginger chicken soup', tone: 'sage', effort: 'Standard' as const },
 ];
 
 const baseLunches = [
-  { title: 'Turkey hummus wrap', effort: '5 min' as const },
-  { title: 'Greek yogurt crunch bowl', effort: '5 min' as const },
-  { title: 'Rotisserie chicken salad', effort: '10 min' as const },
-  { title: 'Tuna cucumber toast', effort: '5 min' as const },
-  { title: 'Chicken pesto wrap', effort: '5 min' as const },
-  { title: 'Egg and avocado toast', effort: '10 min' as const },
-  { title: 'Snack plate with turkey', effort: '5 min' as const },
+  { recipeId: 'turkey-hummus-wrap', title: 'Turkey hummus wrap', effort: '5 min' as const },
+  { recipeId: 'greek-yogurt-crunch-bowl', title: 'Greek yogurt crunch bowl', effort: '5 min' as const },
+  { recipeId: 'rotisserie-chicken-salad', title: 'Rotisserie chicken salad', effort: '10 min' as const },
+  { recipeId: 'tuna-cucumber-toast', title: 'Tuna cucumber toast', effort: '5 min' as const },
+  { recipeId: 'turkey-hummus-wrap', title: 'Turkey hummus wrap', effort: '5 min' as const },
+  { recipeId: 'greek-yogurt-crunch-bowl', title: 'Greek yogurt crunch bowl', effort: '5 min' as const },
+  { recipeId: 'rotisserie-chicken-salad', title: 'Rotisserie chicken salad', effort: '10 min' as const },
 ];
 
 function dateAtNoonUtc(date: string) {
@@ -137,6 +139,7 @@ function adaptDinner(
 
   if (diners.length === 0) {
     return {
+      recipeId: null,
       title: 'Dinner off',
       tone: 'ink',
       servings: 0,
