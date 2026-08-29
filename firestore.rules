@@ -139,7 +139,7 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
-    function validInventoryTransaction(data) {
+    function validPurchaseTransaction(data) {
       return data.keys().hasOnly([
           'kind', 'itemId', 'name', 'quantity', 'unit', 'groceryRunId',
           'groceryItemId', 'createdBy', 'createdAt'
@@ -154,6 +154,38 @@ service cloud.firestore {
         && data.groceryItemId is string
         && data.createdBy == request.auth.uid
         && data.createdAt == request.time;
+    }
+
+    function validConsumptionTransaction(data) {
+      return data.keys().hasOnly([
+          'kind', 'mealId', 'deductions', 'createdBy', 'createdAt'
+        ])
+        && data.kind == 'confirmed_consumption'
+        && data.mealId is string
+        && data.deductions is list
+        && data.deductions.size() > 0
+        && data.deductions.size() <= 50
+        && data.createdBy == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function validMealCompletion(data) {
+      return data.keys().hasOnly([
+          'date', 'mealType', 'recipeId', 'recipeName', 'servings', 'status',
+          'deductions', 'completedBy', 'completedAt'
+        ])
+        && data.date is string
+        && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && (data.mealType == 'lunch' || data.mealType == 'dinner')
+        && data.recipeId is string
+        && data.recipeName is string
+        && data.servings is number
+        && data.servings >= 0
+        && (data.status == 'cooked' || data.status == 'skipped')
+        && data.deductions is list
+        && data.deductions.size() <= 50
+        && data.completedBy == request.auth.uid
+        && data.completedAt == request.time;
     }
 
     match /households/{householdId} {
@@ -227,7 +259,15 @@ service cloud.firestore {
       match /inventoryTransactions/{transactionId} {
         allow read: if isHouseholdMember(householdId);
         allow create, update: if isHouseholdMember(householdId)
-          && validInventoryTransaction(request.resource.data);
+          && (validPurchaseTransaction(request.resource.data)
+            || validConsumptionTransaction(request.resource.data));
+        allow delete: if isHouseholdMember(householdId);
+      }
+
+      match /mealCompletions/{completionId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validMealCompletion(request.resource.data);
         allow delete: if isHouseholdMember(householdId);
       }
 

@@ -28,6 +28,10 @@
 .meal-slot { display: flex; flex-direction: column; justify-content: center; gap: 5px; min-height: 62px; padding: 11px; border-radius: 10px; }
 .meal-slot small { font-size: 7px; font-weight: 900; letter-spacing: .09em; opacity: .68; }
 .meal-slot strong { font: 600 12px/1.25 Georgia, serif; }
+.meal-status { display: flex; gap: 5px; margin-top: 4px; }
+.meal-status button { flex: 1; min-height: 34px; padding: 0 7px; border: 1px solid #315f4b33; border-radius: 8px; color: var(--green); background: #ffffffa8; font-size: 9px; font-weight: 850; cursor: pointer; }
+.meal-status button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.meal-status button.active.skipped { border-color: var(--coral); background: var(--coral); }
 .lunch-slot { color: #345944; background: #edf3ed; }
 .shopping-chip { position: absolute; right: 10px; top: -8px; padding: 4px 8px; border-radius: 999px; color: #5e471c; background: var(--saffron); font-size: 8px; font-weight: 900; }
 .date-picks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -114,6 +118,11 @@
 .password-field input { padding-right: 76px; }
 .password-field button { position: absolute; inset: 3px 3px 3px auto; min-width: 66px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 9px; color: var(--green); background: var(--cream); font-size: 14px; font-weight: 850; cursor: pointer; }
 .password-field button:focus-visible { outline: 3px solid #f2c14e88; outline-offset: 1px; }
+.inventory-actions { display: flex; gap: 7px; }
+.inventory-actions button { min-height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; color: var(--green); background: #f7f8f5; font-size: 11px; font-weight: 800; cursor: pointer; }
+.inventory-actions button:last-child { color: #fff; border-color: var(--green); background: var(--green); }
+.inventory-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 18px 0 6px; }
+.inventory-presets button { min-height: 48px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; color: var(--green); background: #f7f8f5; font-size: 11px; font-weight: 800; cursor: pointer; }
 .auth-card > button { width: 100%; min-height: 50px; margin-top: 8px; border: 0; border-radius: 12px; color: #fff; background: var(--green); font-weight: 850; cursor: pointer; }
 .auth-card > button:disabled { opacity: .65; cursor: wait; }
 .auth-error { padding: 10px 12px; border-radius: 9px; color: #7a3026; background: #e5654f1f; font-size: 11px; line-height: 1.4; }
@@ -234,6 +243,8 @@
   .meal-slot { min-height: 72px; padding: 13px; }
   .meal-slot small { font-size: 12px; line-height: 1.35; }
   .meal-slot strong { font-size: 16px; line-height: 1.3; }
+  .meal-status { margin-top: 7px; }
+  .meal-status button { min-height: 44px; font-size: 12px; }
   .shopping-chip { top: -9px; padding: 6px 9px; font-size: 12px; }
   .date-picks button { min-height: 46px; font-size: 13px; }
   .schedule-sheet label { font-size: 12px; }
@@ -269,7 +280,11 @@
   .inventory-card { grid-template-columns: 1fr 110px; gap: 14px; padding: 16px; }
   .inventory-card strong { font-size: 16px; }
   .inventory-card small { font-size: 13px; }
-  .inventory-card > button, .add-button { min-height: 48px; font-size: 13px; }
+  .inventory-actions { grid-column: 1 / -1; }
+  .inventory-actions button { flex: 1; min-height: 48px; font-size: 13px; }
+  .inventory-presets { grid-template-columns: repeat(2, 1fr); }
+  .inventory-presets button { font-size: 13px; }
+  .add-button { min-height: 48px; font-size: 13px; }
   .store-tabs button { min-height: 50px; font-size: 14px; }
   .store-tabs span { width: 24px; height: 24px; font-size: 12px; }
   .list-summary p:last-child { font-size: 13px; }

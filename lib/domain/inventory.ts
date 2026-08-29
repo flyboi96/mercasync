@@ -33,3 +33,11 @@ export function effectiveInventoryQuantity(item: InventoryItem, now = new Date()
   return Math.round(item.quantity * effectiveInventoryConfidence(item, now)) / 100;
 }
 
+export type InventoryCorrection = 'out' | 'half' | 'same' | 'more';
+
+export function correctedInventoryQuantity(quantity: number, correction: InventoryCorrection) {
+  if (correction === 'out') return 0;
+  if (correction === 'half') return Math.round(quantity * 50) / 100;
+  if (correction === 'more') return Math.round(quantity * 150) / 100;
+  return quantity;
+}

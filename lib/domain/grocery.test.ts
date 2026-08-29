@@ -22,20 +22,28 @@ describe('deterministic grocery calculation', () => {
     expect(normal.find((need) => need.itemId === 'salmon')?.quantity).toBe(1);
   });
 
+  it('reduces recurring breakfast needs while Alex is away', () => {
+    const trip: ScheduleException = { id: 'trip', personId: 'alex', kind: 'work_trip', date: '2026-08-31', title: 'Work trip' };
+    const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES);
+    const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES);
+    expect(normal.find((need) => need.itemId === 'eggs')?.quantity).toBe(14);
+    expect(adjusted.find((need) => need.itemId === 'eggs')?.quantity).toBe(12);
+  });
+
   it('subtracts compatible inventory estimates and removes fully covered needs', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
-      { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 3, unit: 'cup', confidence: 100, lastConfirmedAt: null },
+      { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 6.5, unit: 'cup', confidence: 100, lastConfirmedAt: null },
       { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup', confidence: 100, lastConfirmedAt: null },
     ], friday);
     expect(needs.some((need) => need.itemId === 'frozen-berries')).toBe(false);
-    expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 3.75, inventoryUsed: 1 });
+    expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 9, inventoryUsed: 1 });
   });
 
   it('discounts uncertain inventory instead of treating every estimate as exact', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
       { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 2, unit: 'cup', confidence: 50, lastConfirmedAt: null },
     ], friday);
-    expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 3.75, inventoryUsed: 1 });
+    expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 9, inventoryUsed: 1 });
   });
 
   it('formats common shopping units clearly', () => {

@@ -1,6 +1,7 @@
 import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
 import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
+import { RECURRING_PROFILES, recurringProfileOccurrences } from './recurring-consumption';
 
 export type GroceryNeed = {
   id: string;
@@ -50,6 +51,21 @@ export function buildGroceryNeeds(
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const requirements = new Map<string, GroceryNeed & { required: number }>();
 
+  const addRequirement = (ingredient: { itemId: string; name: string; quantity: number; unit: string; store: 'king_soopers' | 'costco' }, scale: number, source: string) => {
+    const id = `${ingredient.store}:${ingredient.itemId}:${ingredient.unit}`;
+    const existing = requirements.get(id);
+    const required = rounded(ingredient.quantity * scale);
+    if (existing) {
+      existing.required = rounded(existing.required + required);
+      if (!existing.sources.includes(source)) existing.sources.push(source);
+    } else {
+      requirements.set(id, {
+        id, itemId: ingredient.itemId, name: ingredient.name, quantity: required, required,
+        unit: ingredient.unit, store: storeNames[ingredient.store], inventoryUsed: 0, sources: [source],
+      });
+    }
+  };
+
   for (const day of week) {
     for (const planned of [day.lunch, day.meal]) {
       if (!planned.recipeId || planned.servings <= 0) continue;
@@ -57,27 +73,14 @@ export function buildGroceryNeeds(
       if (!recipe) continue;
       const scale = planned.servings / recipe.servings;
       for (const ingredient of recipe.ingredients) {
-        const id = `${ingredient.store}:${ingredient.itemId}:${ingredient.unit}`;
-        const existing = requirements.get(id);
-        const required = rounded(ingredient.quantity * scale);
-        if (existing) {
-          existing.required = rounded(existing.required + required);
-          if (!existing.sources.includes(recipe.name)) existing.sources.push(recipe.name);
-        } else {
-          requirements.set(id, {
-            id,
-            itemId: ingredient.itemId,
-            name: ingredient.name,
-            quantity: required,
-            required,
-            unit: ingredient.unit,
-            store: storeNames[ingredient.store],
-            inventoryUsed: 0,
-            sources: [recipe.name],
-          });
-        }
+        addRequirement(ingredient, scale, recipe.name);
       }
     }
+  }
+
+  for (const profile of RECURRING_PROFILES) {
+    const occurrences = recurringProfileOccurrences(profile, week);
+    for (const ingredient of profile.ingredients) addRequirement(ingredient, occurrences, profile.name);
   }
 
   const inventoryRemaining = new Map(

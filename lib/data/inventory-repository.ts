@@ -67,3 +67,17 @@ export async function confirmInventoryItem(item: InventoryItem, householdId?: st
     updatedAt: serverTimestamp(),
   });
 }
+
+export async function setInventoryQuantity(item: InventoryItem, quantity: number, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  if (!Number.isFinite(quantity) || quantity < 0) throw new Error('Inventory quantity must be zero or greater.');
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before correcting inventory.');
+  await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), {
+    quantity: Math.round(quantity * 100) / 100,
+    confidence: 100,
+    lastConfirmedAt: serverTimestamp(),
+    updatedBy: auth.currentUser.uid,
+    updatedAt: serverTimestamp(),
+  });
+}
