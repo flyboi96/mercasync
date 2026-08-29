@@ -28,7 +28,7 @@ service cloud.firestore {
         || kind == 'away';
     }
 
-    function validScheduleException(data) {
+    function validScheduleExceptionFields(data) {
       return data.keys().hasOnly([
           'personId', 'kind', 'date', 'title', 'location', 'createdBy', 'createdAt'
         ])
@@ -39,9 +39,26 @@ service cloud.firestore {
         && data.title is string
         && data.title.size() > 0
         && data.title.size() <= 120
-        && (data.location == null || data.location is string)
+        && (data.location == null || data.location is string);
+    }
+
+    function validNewScheduleException(data) {
+      return validScheduleExceptionFields(data)
         && data.createdBy == request.auth.uid
         && data.createdAt == request.time;
+    }
+
+    function validMealPlan(data) {
+      return data.keys().hasOnly([
+          'weekStart', 'days', 'sourceFingerprint', 'savedBy', 'savedAt'
+        ])
+        && data.weekStart is string
+        && data.weekStart.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.days is list
+        && data.days.size() == 7
+        && data.sourceFingerprint is string
+        && data.savedBy == request.auth.uid
+        && data.savedAt == request.time;
     }
 
     match /households/{householdId} {
@@ -56,8 +73,20 @@ service cloud.firestore {
       match /scheduleExceptions/{exceptionId} {
         allow read: if isHouseholdMember(householdId);
         allow create: if isHouseholdMember(householdId)
-          && validScheduleException(request.resource.data);
-        allow update, delete: if false;
+          && validNewScheduleException(request.resource.data);
+        allow update: if isHouseholdMember(householdId)
+          && validScheduleExceptionFields(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isHouseholdMember(householdId);
+      }
+
+      match /mealPlans/{weekStart} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && validMealPlan(request.resource.data)
+          && request.resource.data.weekStart == weekStart;
+        allow delete: if false;
       }
 
       match /{document=**} {
