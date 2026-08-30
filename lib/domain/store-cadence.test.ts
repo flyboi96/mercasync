@@ -31,4 +31,15 @@ describe('store cadence', () => {
     const almonds = { ...costcoNeed, id: 'costco:almonds:oz', itemId: 'almonds', name: 'Almonds', quantity: 5, unit: 'oz' };
     expect(applyStoreCadence([almonds], true)[0]).toMatchObject({ store: 'Costco', quantity: 32 });
   });
+
+  it('honors a remembered King Soopers preference', () => {
+    const preferences = [{ id: 'eggs', itemId: 'eggs', name: 'Eggs', preferredStore: 'King Soopers' as const, bulkMode: 'never' as const, packageQuantity: null, packageUnit: null, shelfLifeDays: null, freezable: false }];
+    expect(applyStoreCadence([costcoNeed], true, preferences)[0]).toMatchObject({ store: 'King Soopers', storeReason: 'Remembered household preference: buy this at King Soopers' });
+  });
+
+  it('uses a remembered compatible Costco package policy', () => {
+    const need = { ...costcoNeed, itemId: 'tofu', name: 'Tofu', quantity: 2, unit: 'each', store: 'King Soopers' as const };
+    const preferences = [{ id: 'tofu', itemId: 'tofu', name: 'Tofu', preferredStore: 'Costco' as const, bulkMode: 'always' as const, packageQuantity: 4, packageUnit: 'each', shelfLifeDays: 30, freezable: false }];
+    expect(applyStoreCadence([need], true, preferences)[0]).toMatchObject({ store: 'Costco', quantity: 4 });
+  });
 });

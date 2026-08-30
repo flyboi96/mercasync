@@ -41,4 +41,22 @@ export function correctedInventoryQuantity(quantity: number, correction: Invento
   if (correction === 'more') return Math.round(quantity * 150) / 100;
   return quantity;
 }
+
+export type InventoryCategory = 'Produce' | 'Protein' | 'Dairy' | 'Pantry' | 'Frozen' | 'Other';
+
+export function inventoryCategory(item: Pick<InventoryItem, 'itemId' | 'name'>): InventoryCategory {
+  const value = `${item.itemId} ${item.name}`.toLowerCase();
+  if (/spinach|lettuce|romaine|tomato|cucumber|avocado|broccoli|mushroom|bok|cabbage|lemon|lime|onion|garlic|ginger|pepper|berry|berries|produce/.test(value)) return 'Produce';
+  if (/chicken|turkey|beef|steak|salmon|fish|tuna|egg|pork|tofu/.test(value)) return 'Protein';
+  if (/yogurt|milk|cheese|cream|butter/.test(value)) return 'Dairy';
+  if (/frozen/.test(value)) return 'Frozen';
+  if (/rice|oat|pasta|bread|tortilla|bean|lentil|broth|oil|spice|sauce|can/.test(value)) return 'Pantry';
+  return 'Other';
+}
+
+export function inventoryDuplicateGroups(items: InventoryItem[]) {
+  const groups = new Map<string, InventoryItem[]>();
+  items.forEach((item) => groups.set(canonicalItemId(item.itemId || item.name), [...(groups.get(canonicalItemId(item.itemId || item.name)) || []), item]));
+  return [...groups.values()].filter((group) => group.length > 1);
+}
 import { canonicalItemId, normalizeUnit } from './units';

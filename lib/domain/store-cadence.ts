@@ -1,4 +1,5 @@
 import type { GroceryNeed } from './grocery';
+import type { StorePreference } from './store-preference';
 
 type BulkPolicy = { packageQuantity: number; packageUnit: string; shelfLifeDays: number; freezable?: boolean };
 
@@ -29,20 +30,24 @@ function rounded(quantity: number) {
   return Math.round(quantity * 100) / 100;
 }
 
-export function applyStoreCadence(needs: GroceryNeed[], costcoThisWeek: boolean): StoreOptimizedNeed[] {
+export function applyStoreCadence(needs: GroceryNeed[], costcoThisWeek: boolean, preferences: StorePreference[] = []): StoreOptimizedNeed[] {
   return needs.map((need) => {
-    const policy = BULK_POLICIES[need.itemId];
-    if (isProduce(need)) return { ...need, id: `king-soopers:${need.itemId}:${need.unit}`, store: 'King Soopers' as const, storeReason: 'Fresh produce is sized for this week to reduce waste', weeksCovered: 1 as const };
+    const preference = preferences.find((item) => item.itemId === need.itemId);
+    const savedPolicy = preference?.packageQuantity && preference.packageUnit && preference.shelfLifeDays ? { packageQuantity: preference.packageQuantity, packageUnit: preference.packageUnit, shelfLifeDays: preference.shelfLifeDays, freezable: preference.freezable } : undefined;
+    const policy = savedPolicy || BULK_POLICIES[need.itemId];
+    if (preference?.bulkMode === 'never' || preference?.preferredStore === 'King Soopers') return { ...need, id: `king-soopers:${need.itemId}:${need.unit}`, store: 'King Soopers' as const, storeReason: 'Remembered household preference: buy this at King Soopers', weeksCovered: 1 as const };
+    if (isProduce(need) && preference?.bulkMode !== 'always') return { ...need, id: `king-soopers:${need.itemId}:${need.unit}`, store: 'King Soopers' as const, storeReason: 'Fresh produce is sized for this week to reduce waste', weeksCovered: 1 as const };
     const compatiblePolicy = policy?.packageUnit === need.unit ? policy : undefined;
     const twoWeekDemand = rounded(need.quantity * 2);
     const packageUse = compatiblePolicy ? twoWeekDemand / compatiblePolicy.packageQuantity : 0;
     const keepsLongEnough = Boolean(compatiblePolicy && (compatiblePolicy.shelfLifeDays >= 14 || compatiblePolicy.freezable));
     const automaticShare = compatiblePolicy?.shelfLifeDays && compatiblePolicy.shelfLifeDays >= 60 ? 0.3 : compatiblePolicy?.freezable ? 0.4 : 0.55;
-    const minimumUsefulShare = need.store === 'Costco' ? Math.min(automaticShare, 0.2) : automaticShare;
+    const prefersCostco = preference?.preferredStore === 'Costco' || need.store === 'Costco';
+    const minimumUsefulShare = preference?.bulkMode === 'always' ? 0 : prefersCostco ? Math.min(automaticShare, 0.2) : automaticShare;
     const earnsBulkTrip = Boolean(costcoThisWeek && compatiblePolicy && keepsLongEnough && packageUse >= minimumUsefulShare);
     if (earnsBulkTrip) {
       const packages = Math.max(1, Math.ceil(twoWeekDemand / compatiblePolicy!.packageQuantity));
-      return { ...need, id: `costco:${need.itemId}:${need.unit}`, store: 'Costco' as const, quantity: rounded(packages * compatiblePolicy!.packageQuantity), storeReason: `${twoWeekDemand} ${need.unit} projected for 2 weeks · ${need.store === 'Costco' ? 'household prefers Costco and ' : ''}bulk package keeps safely`, weeksCovered: 2 as const };
+      return { ...need, id: `costco:${need.itemId}:${need.unit}`, store: 'Costco' as const, quantity: rounded(packages * compatiblePolicy!.packageQuantity), storeReason: `${twoWeekDemand} ${need.unit} projected for 2 weeks · ${prefersCostco ? 'household prefers Costco and ' : ''}bulk package keeps safely`, weeksCovered: 2 as const };
     }
     return {
       ...need,

@@ -142,6 +142,18 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function validStorePreference(data) {
+      return data.keys().hasOnly(['itemId', 'name', 'preferredStore', 'bulkMode', 'packageQuantity', 'packageUnit', 'shelfLifeDays', 'freezable', 'updatedBy', 'updatedAt'])
+        && data.itemId is string && data.name is string
+        && (data.preferredStore == 'auto' || data.preferredStore == 'King Soopers' || data.preferredStore == 'Costco')
+        && (data.bulkMode == 'auto' || data.bulkMode == 'always' || data.bulkMode == 'never')
+        && (data.packageQuantity == null || (data.packageQuantity is number && data.packageQuantity > 0))
+        && (data.packageUnit == null || data.packageUnit is string)
+        && (data.shelfLifeDays == null || (data.shelfLifeDays is int && data.shelfLifeDays > 0 && data.shelfLifeDays <= 730))
+        && data.freezable is bool
+        && data.updatedBy == request.auth.uid && data.updatedAt == request.time;
+    }
+
     function validRecipe(data) {
       return data.keys().hasOnly([
           'name', 'mealType', 'description', 'cuisine', 'protein', 'method',
@@ -338,6 +350,12 @@ service cloud.firestore {
           && settingsId == 'foodGoals'
           && validFoodGoals(request.resource.data);
         allow delete: if false;
+      }
+
+      match /storePreferences/{itemId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId) && validStorePreference(request.resource.data);
+        allow delete: if isHouseholdMember(householdId);
       }
 
       match /aiGenerationRequests/{requestId} {

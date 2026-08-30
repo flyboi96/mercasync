@@ -69,6 +69,17 @@ export async function confirmInventoryItem(item: InventoryItem, householdId?: st
   });
 }
 
+export async function confirmInventoryItems(items: InventoryItem[], householdId?: string) {
+  if (!usesFirebaseBackend() || items.length === 0) return;
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before confirming inventory.');
+  const batch = writeBatch(db);
+  items.forEach((item) => batch.update(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), {
+    confidence: 100, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp(),
+  }));
+  await batch.commit();
+}
+
 export async function setInventoryQuantity(item: InventoryItem, quantity: number, householdId?: string) {
   if (!usesFirebaseBackend()) return;
   if (!Number.isFinite(quantity) || quantity < 0) throw new Error('Inventory quantity must be zero or greater.');
