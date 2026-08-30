@@ -5091,9 +5091,8 @@ function InventoryView({
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "review" | "low" | "recent">(
-    "review",
-  );
+  const [filter, setFilter] = useState<"all" | "review" | "low" | "recent">("all");
+  const inventorySearchRef = useRef<HTMLInputElement>(null);
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [openedAt] = useState(() => Date.now());
   const [quantity, setQuantity] = useState("");
@@ -5117,6 +5116,11 @@ function InventoryView({
   const openUse = (item: InventoryItem) => {
     setUsingItem(item);
     setUsedAmount(String(Math.min(1, item.quantity)));
+  };
+  const startQuickUse = () => {
+    setFilter("all");
+    setQuery("");
+    window.setTimeout(() => inventorySearchRef.current?.focus(), 0);
   };
   const recordUse = async () => {
     if (!usingItem) return;
@@ -5230,17 +5234,18 @@ function InventoryView({
         <div>
           <button onClick={() => { setFilter("review"); setQuery(""); }}>Review uncertain</button>
           <button onClick={() => { setFilter("all"); setQuery(""); }}>Deep check</button>
-          <button onClick={() => inventory[0] ? openUse(inventory[0]) : notify("Add something to inventory first.")}>I used something</button>
+          <button onClick={startQuickUse}>I used something</button>
         </div>
       </section>
       <div className="inventory-toolbar">
         <label>
           <span>Find inventory</span>
           <input
+            ref={inventorySearchRef}
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search food or category"
+            placeholder="Search, then tap Used or Adjust"
           />
         </label>
         <div className="inventory-filters">
