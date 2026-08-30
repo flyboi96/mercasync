@@ -3950,10 +3950,8 @@ function RoutineEditor({
             ×
           </button>
         </div>
-        <p className="sheet-intro">
-          Teach MercaSync the normal week once. Schedule exceptions
-          automatically remove routines when that person is away.
-        </p>
+        <p className="sheet-intro">Start with your normal breakfast and weekday lunch. Schedule exceptions automatically remove routines when someone is away.</p>
+        <div className="routine-templates"><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Shared breakfast"; next.person = "both"; next.mealType = "breakfast"; next.timesPerWeek = 7; next.weekdays = [0, 1, 2, 3, 4, 5, 6]; setSelectedId("new"); setDraft(next); }}>＋ Shared breakfast</button><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Weekday lunch"; next.person = "both"; next.mealType = "lunch"; next.timesPerWeek = 5; next.weekdays = [0, 1, 2, 3, 4]; setSelectedId("new"); setDraft(next); }}>＋ Weekday lunch</button></div>
         <div className="recurring-picker">
           {foods.map((food) => (
             <button
@@ -5006,7 +5004,7 @@ function InventoryView({
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "review" | "low" | "recent">(
-    "review",
+    "all",
   );
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [openedAt] = useState(() => Date.now());
