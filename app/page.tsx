@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   createScheduleException,
   deleteScheduleException,
@@ -3043,7 +3044,7 @@ function RecipeDetailSheet({
         item.quantity > 0,
     ),
   ).length;
-  return (
+  const sheet = (
     <div className="sheet-backdrop recipe-detail-backdrop" onClick={onClose}>
       <section
         className="recipe-detail"
@@ -3142,6 +3143,7 @@ function RecipeDetailSheet({
       </section>
     </div>
   );
+  return typeof document === "undefined" ? null : createPortal(sheet, document.body);
 }
 
 function RecipesView({

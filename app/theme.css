@@ -557,7 +557,7 @@
 
 @media (max-width: 720px) {
   .meal-action-backdrop { place-items: end center; padding: 0; }
-  .meal-action-sheet, .recipe-creator, .grocery-adder { width: 100%; max-height: calc(94dvh - env(safe-area-inset-top)); padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
+  .meal-action-sheet, .recipe-creator, .grocery-adder { width: 100%; max-height: calc(94dvh - env(safe-area-inset-top)); overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding-bottom: calc(20px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
   .meal-kind-grid { grid-template-columns: repeat(2, 1fr); }
   .creator-grid { grid-template-columns: 1fr 1fr; }
   .shopping-date { align-items: stretch; flex-direction: column; }
