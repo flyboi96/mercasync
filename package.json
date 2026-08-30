@@ -1,6 +1,6 @@
 {
   "name": "mercasync",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -19,6 +19,7 @@
     "firebase:emulators": "firebase emulators:start --only auth,firestore --project demo-mercasync",
     "firebase:seed": "node scripts/seed-firebase-emulators.mjs",
     "firebase:verify": "node scripts/verify-firebase-emulators.mjs",
+    "ai:plan": "node scripts/generate-ai-recipes.mjs",
     "ai:recipes": "node scripts/generate-ai-recipes.mjs"
   },
   "dependencies": {

@@ -112,6 +112,10 @@ AI planning is asynchronous and approval-gated. The public client may edit const
 
 Grocery quantities and primary store assignment remain deterministic. Package unit, projected two-week demand, shelf life, freezeability, Costco cadence, and produce freshness are evaluated in domain code. AI may explain or flag those results but cannot overwrite them. This preserves useful operation when AI is unavailable and makes every store decision inspectable and correctable.
 
+Ingredient identity and units are normalized at data-entry and calculation boundaries. Compatible mass and volume units are converted before inventory subtraction or confirmed meal consumption; incompatible dimensions are never guessed. Meal outcome changes restore any previous deductions before applying new ones, which makes Cooked and Undo idempotent.
+
+The Firebase web client uses persistent local caching for readable household state. The UI explicitly reports offline and reconnected states. Transactional shopping and meal-reconciliation changes require connectivity and are described that way; the interface does not claim an offline mutation was saved when Firestore could not commit it.
+
 ## Static GitHub Pages deployment
 
 GitHub Pages is the no-billing production target. The deployed PWA is a

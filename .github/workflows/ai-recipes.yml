@@ -1,4 +1,4 @@
-name: Generate seasonal recipe proposals
+name: Generate smart household plans
 
 on:
   schedule:
@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run ai:recipes
+      - run: npm run ai:plan
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}

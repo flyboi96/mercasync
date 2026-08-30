@@ -24,6 +24,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Full recipe editing and deletion from the shared recipe detail view
 - Per-week grocery quantity corrections and removal that survive automatic recalculation
 - Smart weekly planning with immediate rule-based attention signals plus AI-enhanced schedule, inventory, prep, nutrition, shopping, and recipe recommendations
+- Five-step, resumable Weekend Reset covering inventory, schedule, meals, optional AI assistance, and final approval
+- Real meal reconciliation for cooked meals, leftovers, eating out, skipped meals, and moving a meal to another day
+- Compatible ingredient-unit normalization with persistent cached plans and explicit offline/reconnected states
 - Explainable store routing: Costco only for compatible, durable bulk packages; King Soopers for produce, small quantities, and immediate needs
 - ChatGPT Kitchen with shared nutrition goals and reviewable recipe proposals, with explicit approval before grocery impact
 - Real inventory creation for foods already at home

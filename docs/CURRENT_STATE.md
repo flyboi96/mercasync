@@ -126,6 +126,15 @@ The UI, Firestore rules, and worker are deployed independently from credentials.
 - Grocery rows separate the essential quantity/source line from an expandable “Why here?” explanation and retain one-tap store correction.
 - AI recommendations navigate to the relevant human-controlled surface and never directly mutate schedule, inventory, groceries, or meal plans.
 
+## Version 0.19 reliability workflow update
+
+- Weekend Reset is now a five-stage, resumable workflow covering inventory, unusual schedule review, adjustable meals, optional AI assistance, and final shared-plan approval.
+- AI requests visibly progress through queued, processing, completed, and failed states on Plan, Recipes, and Weekend Reset. Failed runs preserve the deterministic plan and expose Retry.
+- Meal reconciliation distinguishes cooked-as-planned, leftovers, eating out, and skipped meals. Only cooked-as-planned deducts recipe ingredients; changing or undoing an outcome restores prior deductions.
+- A planned lunch or dinner can move to another day with an atomic pair of Firestore overrides followed by grocery recalculation.
+- Ingredient names and units are normalized at entry and calculation boundaries. Compatible mass and volume units convert before grocery subtraction and consumption; incompatible units remain separate.
+- Firestore state uses persistent browser caching. An accessible connection banner distinguishes offline cached viewing from restored connectivity and clearly identifies actions that require reconnection.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.
