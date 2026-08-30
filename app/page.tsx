@@ -387,6 +387,7 @@ function CalendarView({ events, trips, week, recipes, inventory, completions, ho
     setMonthAnchor(next.toISOString().slice(0, 10));
   };
   const monthDays = calendarMonthDays(monthAnchor);
+  const changeTripDate = async (store: StoreName, tripDate: string) => { try { await saveShoppingTrip(store, tripDate, week[0].date, householdId); notify(`${store} trip saved to both calendars.`); } catch { notify(`Could not save the ${store} trip.`); } };
   const remove = async (event: ScheduleException) => {
     if (!window.confirm(`Delete “${event.title}”?`)) return;
     try {
@@ -409,6 +410,7 @@ function CalendarView({ events, trips, week, recipes, inventory, completions, ho
       <button className={view === 'work' ? 'active' : ''} onClick={() => setView('work')} role="tab" aria-selected={view === 'work'}>Work & availability</button>
       <button className={view === 'meals' ? 'active' : ''} onClick={() => setView('meals')} role="tab" aria-selected={view === 'meals'}>Meals & shopping</button>
     </div>
+    <section className="calendar-trip-planner" aria-label="Shopping trip dates"><div><p className="eyebrow">SHOPPING TRIPS</p><h2>Choose when you’re going</h2><p>These dates appear on both calendar views.</p></div>{(['King Soopers', 'Costco'] as StoreName[]).map((tripStore) => <label key={tripStore}><span><strong>{tripStore}</strong><small>{tripStore === 'Costco' ? 'Prefer Tuesday–Thursday after work' : 'Usually over the weekend'}</small></span><input type="date" value={trips.find((trip) => trip.store === tripStore)?.date || ''} onChange={(event) => changeTripDate(tripStore, event.target.value)} /></label>)}</section>
     {view === 'work' ? <>
       <div className="calendar-actions"><div><p className="eyebrow">ONLY THE UNUSUAL DAYS</p><h2>Alex & Nathalia</h2><p>Normal Monday–Friday routines stay assumed. Add holidays, trips, late work, and unusual days.</p></div><button className="add-schedule" onClick={() => showEditor()}>＋ Add change</button></div>
       {events.length > 0 && <div className="event-strip">{events.map(event => <article key={event.id}><span className={`avatar ${event.personId}`}>{event.personId === 'alex' ? 'A' : 'N'}</span><div><strong>{event.title}</strong><small>{event.date}{event.endDate ? ` → ${event.endDate}` : ''} · {labels[event.kind]}</small></div><div className="event-actions"><button onClick={() => showEditor(event)}>Edit</button><button className="danger" onClick={() => remove(event)}>Delete</button></div></article>)}</div>}
@@ -450,7 +452,7 @@ function SignInView({ error }: { error: string }) {
   return <main className="auth-shell"><form className="auth-card" onSubmit={submit}><div className="brand"><span className="brand-mark">M</span><span>MercaSync</span><small className="version-badge">v{APP_VERSION}</small></div><p className="eyebrow">PRIVATE HOUSEHOLD</p><h1>Welcome home</h1><p>Sign in as Alex or Nathalia to open the shared plan.</p><label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label>Password<span className="password-field"><input type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" aria-pressed={showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? 'Hide' : 'Show'}</button></span></label>{message && <p className="auth-error" role="alert">{message}</p>}<button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button></form></main>;
 }
 function AiRecipeStudio({ goals, proposals, inventory, week, aiRequest, householdId, onGoals, onApproved, notify }: { goals: HouseholdFoodGoals; proposals: AiRecipeProposal[]; inventory: InventoryItem[]; week: PlanningDay[]; aiRequest: AiGenerationRequest | null; householdId?: string; onGoals: (goals: HouseholdFoodGoals) => void; onApproved: (recipe: Recipe) => void; notify: (message: string) => void }) {
-  const [open, setOpen] = useState(false); const [editingGoals, setEditingGoals] = useState(false); const [draft, setDraft] = useState(goals); const [working, setWorking] = useState('');
+  const [open, setOpen] = useState(true); const [editingGoals, setEditingGoals] = useState(false); const [draft, setDraft] = useState(goals); const [working, setWorking] = useState('');
   const season = seasonForMonth(new Date().getMonth());
   const usefulInventory = inventory.filter((item) => item.quantity > 0 && effectiveInventoryConfidence(item) >= 45).sort((a, b) => effectiveInventoryConfidence(b) - effectiveInventoryConfidence(a)).slice(0, 4);
   const lateNights = week.filter((day) => day.alex.isLate || day.nathalia.isLate).length; const awayDays = week.filter((day) => !day.alex.isHome || !day.nathalia.isHome).length;
