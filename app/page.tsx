@@ -971,6 +971,7 @@ export default function Home() {
             costcoThisWeek={costcoScheduledThisWeek}
             preferences={storePreferences}
             notify={notify}
+            openInventory={() => setActive("Inventory")}
           />
         )}
         {active === "Settings" && (
@@ -5029,7 +5030,7 @@ function InventoryView({
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "review" | "low" | "recent">(
-    "all",
+    "review",
   );
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [openedAt] = useState(() => Date.now());
@@ -5037,6 +5038,8 @@ function InventoryView({
   const [newName, setNewName] = useState("");
   const [newQuantity, setNewQuantity] = useState("");
   const [newUnit, setNewUnit] = useState("each");
+  const [usingItem, setUsingItem] = useState<InventoryItem | null>(null);
+  const [usedAmount, setUsedAmount] = useState("1");
   const confirm = async (item: InventoryItem) => {
     try {
       await confirmInventoryItem(item, householdId);
@@ -5048,6 +5051,36 @@ function InventoryView({
   const openCorrection = (item: InventoryItem) => {
     setEditing(item);
     setQuantity(String(item.quantity));
+  };
+  const openUse = (item: InventoryItem) => {
+    setUsingItem(item);
+    setUsedAmount(String(Math.min(1, item.quantity)));
+  };
+  const recordUse = async () => {
+    if (!usingItem) return;
+    const amount = Number(usedAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > usingItem.quantity) {
+      notify(`Enter an amount up to ${usingItem.quantity} ${usingItem.unit}.`);
+      return;
+    }
+    const remaining = Math.round((usingItem.quantity - amount) * 100) / 100;
+    try {
+      await setInventoryQuantity(usingItem, remaining, householdId);
+      notify(remaining === 0 ? `${usingItem.name} marked finished.` : `${amount} ${usingItem.unit} of ${usingItem.name} used.`);
+      setUsingItem(null);
+    } catch {
+      notify(`Could not update ${usingItem.name}.`);
+    }
+  };
+  const finishUsing = async () => {
+    if (!usingItem) return;
+    try {
+      await setInventoryQuantity(usingItem, 0, householdId);
+      notify(`${usingItem.name} marked finished.`);
+      setUsingItem(null);
+    } catch {
+      notify(`Could not update ${usingItem.name}.`);
+    }
   };
   const chooseCorrection = (correction: InventoryCorrection) => {
     if (!editing) return;
@@ -5088,6 +5121,7 @@ function InventoryView({
     }
   };
   const duplicates = inventoryDuplicateGroups(inventory);
+  const reviewCount = inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length;
   const visible = inventory.filter((item) => {
     if (
       !`${item.name} ${inventoryCategory(item)}`
@@ -5125,6 +5159,18 @@ function InventoryView({
         Confidence falls 2% per day after confirmation and changes shopping
         quantities.
       </div>
+      <section className="weekend-inventory-check">
+        <div>
+          <p className="eyebrow">WEEKEND KITCHEN CHECK</p>
+          <h2>{reviewCount ? `${reviewCount} things to confirm` : "Inventory is current"}</h2>
+          <p>Review the uncertain items before building groceries; use the full list only when you want a deeper pantry reset.</p>
+        </div>
+        <div>
+          <button onClick={() => { setFilter("review"); setQuery(""); }}>Review uncertain</button>
+          <button onClick={() => { setFilter("all"); setQuery(""); }}>Deep check</button>
+          <button onClick={() => inventory[0] ? openUse(inventory[0]) : notify("Add something to inventory first.")}>I used something</button>
+        </div>
+      </section>
       <div className="inventory-toolbar">
         <label>
           <span>Find inventory</span>
@@ -5201,6 +5247,7 @@ function InventoryView({
               <small>{confidence}% sure</small>
             </div>
             <div className="inventory-actions">
+              <button onClick={() => openUse(item)}>Used</button>
               <button onClick={() => openCorrection(item)}>Adjust</button>
               <button onClick={() => confirm(item)}>Looks right</button>
             </div>
@@ -5277,6 +5324,19 @@ function InventoryView({
               This confirms the amount at 100% and immediately recalculates
               groceries.
             </p>
+          </section>
+        </div>
+      )}
+      {usingItem && (
+        <div className="sheet-backdrop" onClick={() => setUsingItem(null)}>
+          <section className="schedule-sheet inventory-sheet" role="dialog" aria-modal="true" aria-label={`Record using ${usingItem.name}`} onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-handle" />
+            <div className="sheet-heading"><div><p className="eyebrow">QUICK INVENTORY UPDATE</p><h2>Used {usingItem.name}</h2></div><button aria-label="Close" onClick={() => setUsingItem(null)}>×</button></div>
+            <p className="sheet-note">You have about {formatGroceryQuantity(usingItem.quantity, usingItem.unit)}. This immediately updates the grocery math.</p>
+            <label>What did you use?<select value={`${usingItem.itemId}:${usingItem.unit}`} onChange={(event) => { const next = inventory.find((item) => `${item.itemId}:${item.unit}` === event.target.value); if (next) openUse(next); }}>{inventory.map((item) => <option key={`${item.itemId}:${item.unit}`} value={`${item.itemId}:${item.unit}`}>{item.name} · {formatGroceryQuantity(item.quantity, item.unit)}</option>)}</select></label>
+            <label>Amount used<input autoFocus type="number" min="0.01" max={usingItem.quantity} step="0.25" inputMode="decimal" value={usedAmount} onChange={(event) => setUsedAmount(event.target.value)} /><small>{usingItem.unit}</small></label>
+            <button className="save-schedule" onClick={recordUse}>Record used amount</button>
+            <button className="delete-recurring" onClick={finishUsing}>Finished it</button>
           </section>
         </div>
       )}
@@ -5360,6 +5420,7 @@ function GroceriesView({
   costcoThisWeek,
   preferences,
   notify,
+  openInventory,
 }: {
   items: Grocery[];
   week: PlanningDay[];
@@ -5371,6 +5432,7 @@ function GroceriesView({
   costcoThisWeek: boolean;
   preferences: StorePreference[];
   notify: (message: string) => void;
+  openInventory: () => void;
 }) {
   const visible = items.filter((item) => item.store === store);
   const remaining = visible.filter((item) => !item.checked).length;
@@ -5613,6 +5675,11 @@ function GroceriesView({
           Schedule-aware recipe servings − compatible estimated inventory
         </p>
       </div>
+      <button className="grocery-inventory-handoff" onClick={openInventory}>
+        <span>◫</span>
+        <span><strong>Update inventory after shopping</strong><small>Confirm what is actually home or record something you used.</small></span>
+        <b>→</b>
+      </button>
       {addOpen && (
         <div className="sheet-backdrop" onClick={() => setAddOpen(false)}>
           <section
