@@ -439,7 +439,7 @@
 
 /* iPhone-first planner: one clear column, 16px inputs, and thumb-sized actions. */
 @media (max-width: 720px) {
-  html { -webkit-text-size-adjust: 100%; }
+  html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
   .app-shell, .content { min-width: 0; }
   .reset-sheet { width: 100vw; max-height: 100dvh; border-radius: 0; padding: max(16px, env(safe-area-inset-top)) 18px calc(96px + env(safe-area-inset-bottom)); }
   .reset-steps { overflow-x: auto; grid-template-columns: repeat(6, 72px); justify-content: start; }
