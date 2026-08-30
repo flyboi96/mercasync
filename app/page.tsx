@@ -210,6 +210,21 @@ const nav = [
   { label: "Settings", icon: "⚙" },
 ];
 
+// The household's default Costco rhythm starts with the first Tuesday after
+// this product launch and repeats every other Tuesday. A saved trip date always
+// wins over this baseline.
+function defaultCostcoTripDate(weekStart: string) {
+  const tuesday = new Date(`${weekStart}T12:00:00Z`);
+  tuesday.setUTCDate(tuesday.getUTCDate() + ((2 - tuesday.getUTCDay() + 7) % 7));
+  const anchor = new Date("2026-09-01T12:00:00Z");
+  const weeksFromAnchor = Math.round(
+    (tuesday.getTime() - anchor.getTime()) / (7 * 86_400_000),
+  );
+  if (Math.abs(weeksFromAnchor) % 2 === 0) return tuesday.toISOString().slice(0, 10);
+  tuesday.setUTCDate(tuesday.getUTCDate() + 7);
+  return tuesday.toISOString().slice(0, 10);
+}
+
 export default function Home() {
   const [active, setActive] = useState("Plan");
   const [items, setItems] = useState<Grocery[]>(fallbackGroceries);
@@ -331,12 +346,12 @@ export default function Home() {
       {
         id: `${week[0]?.date}--king-soopers`,
         store: "King Soopers",
-        date: week[5]?.date || "",
+        date: week[6]?.date || "",
       },
       {
         id: `${week[0]?.date}--costco`,
         store: "Costco",
-        date: week[2]?.date || "",
+        date: week[0]?.date ? defaultCostcoTripDate(week[0].date) : "",
       },
     ];
     return defaults.map(

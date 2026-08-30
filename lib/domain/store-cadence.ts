@@ -68,7 +68,7 @@ export function applyStoreCadence(needs: GroceryNeed[], costcoThisWeek: boolean,
 }
 
 export function storeRunLabel(week: { date: string; dayLabel: string }[], store: 'King Soopers' | 'Costco', costcoThisWeek: boolean) {
-  if (store === 'King Soopers') return `Weekend · ${week[5]?.dayLabel || 'Sat'} ${week[5]?.date.slice(5).replace('-', '/') || ''}`;
+  if (store === 'King Soopers') return `Sunday · ${week[6]?.dayLabel || 'Sun'} ${week[6]?.date.slice(5).replace('-', '/') || ''}`;
   if (!costcoThisWeek) return 'Next week · Tue–Thu';
   return `${week[1]?.date.slice(5).replace('-', '/')}–${week[3]?.date.slice(5).replace('-', '/')} · after work`;
 }
