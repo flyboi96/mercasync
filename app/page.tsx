@@ -1017,10 +1017,6 @@ export default function Home() {
           goals={foodGoals}
           onGoals={setFoodGoals}
           householdId={auth.session?.householdId}
-          onOpenCalendar={() => {
-            setResetOpen(false);
-            setActive("Calendar");
-          }}
           onEditMeal={(date) => {
             setResetOpen(false);
             setEditingMeal({ date, mealType: "dinner" });
@@ -3128,7 +3124,6 @@ function RecipesView({
       <SimpleRecipeLab
         goals={goals}
         proposals={proposals}
-        inventory={inventory}
         week={week}
         aiRequest={aiRequest}
         householdId={householdId}
@@ -4199,7 +4194,6 @@ function RoutineEditor({
   );
 }
 function WeekendReset({
-  inventory,
   events,
   week,
   trips,
@@ -4212,13 +4206,11 @@ function WeekendReset({
   goals,
   onGoals,
   householdId,
-  onOpenCalendar,
   onEditMeal,
   onClose,
   onFinish,
   notify,
 }: {
-  inventory: InventoryItem[];
   events: ScheduleException[];
   week: PlanningDay[];
   trips: ShoppingTrip[];
@@ -4231,7 +4223,6 @@ function WeekendReset({
   goals: HouseholdFoodGoals;
   onGoals: (goals: HouseholdFoodGoals) => void;
   householdId?: string;
-  onOpenCalendar: () => void;
   onEditMeal: (date: string) => void;
   onClose: () => void;
   onFinish: () => Promise<void>;
