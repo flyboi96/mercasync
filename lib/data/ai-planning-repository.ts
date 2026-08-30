@@ -1,6 +1,6 @@
 'use client';
 
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
 import { DEFAULT_FOOD_GOALS, type AiGenerationRequest, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import type { AiWeeklyDraft } from '@/lib/domain/weekly-draft';
@@ -44,14 +44,15 @@ export async function requestAiRecipes(weekStart: string, season: string, househ
   try {
     const dispatchUrl = process.env.NEXT_PUBLIC_AI_DISPATCH_URL;
     if (!dispatchUrl) throw new Error('Immediate AI dispatch is not configured.');
-    const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ brief: { weekStart, season, storePolicy: 'Prefer Costco for durable bulk staples. Prefer King Soopers for produce and perishable items.', goals: DEFAULT_FOOD_GOALS } }) });
+    const root = doc(db, 'households', household(householdId));
+    const [goalsDoc, settingsDoc, inventorySnap, recipesSnap, scheduleSnap] = await Promise.all([getDoc(doc(root, 'aiSettings', 'foodGoals')), getDoc(doc(root, 'planningSettings', 'current')), getDocs(collection(root, 'inventory')), getDocs(collection(root, 'recipes')), getDocs(collection(root, 'scheduleExceptions'))]);
+    const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ brief: { weekStart, season, dinnerTarget: settingsDoc.data()?.dinnerTarget ?? 5, goals: goalsDoc.exists() ? goalsDoc.data() : DEFAULT_FOOD_GOALS, inventory: inventorySnap.docs.map((entry) => entry.data()).filter((item) => item.quantity > 0).map(({ name, quantity, unit }) => ({ name, quantity, unit })).slice(0, 30), existingRecipes: recipesSnap.docs.map((entry) => entry.data().name).filter(Boolean).slice(0, 60), scheduleExceptions: scheduleSnap.docs.map((entry) => entry.data()).filter((item) => item.date >= weekStart).slice(0, 20), storePolicy: 'Prefer Costco for durable bulk staples. Prefer King Soopers for produce and perishable items.' } }) });
     if (!response.ok) {
       const detail = await response.json().catch(() => null) as { error?: string } | null;
       throw new Error(detail?.error || 'Could not generate the AI plan.');
     }
     const data = await response.json() as { plan?: { headline?: string; summary?: string; recipes?: Array<Record<string, unknown>>; slots?: Array<Record<string, unknown>> } };
     if (!data.plan?.recipes?.length || !data.plan.slots?.length) throw new Error('AI returned an incomplete plan. Please retry.');
-    const root = doc(db, 'households', household(householdId));
     const batch = writeBatch(db);
     const recipeIds = new Map<string, string>();
     const recipes = data.plan.recipes.slice(0, 5).map((raw, index) => {
