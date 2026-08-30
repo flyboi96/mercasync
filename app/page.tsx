@@ -840,11 +840,19 @@ export default function Home() {
           />
         )}
         {active === "Plan" && (
-          <SimplePlanView
+          <WeeklyCheck
             items={displayItems}
             inventory={inventory}
             week={week}
             profiles={recurringProfiles}
+            trips={displayedTrips}
+            dinnerTarget={dinnerTarget}
+            setDinnerTarget={changeDinnerTarget}
+            goals={foodGoals}
+            setGoals={setFoodGoals}
+            householdId={auth.session?.householdId}
+            costcoThisWeek={costcoThisWeek}
+            setCostcoThisWeek={changeCostcoWeek}
             startReset={() => setResetOpen(true)}
             editRoutines={() => setRoutinesOpen(true)}
             editMeal={(date) => setEditingMeal({ date, mealType: "dinner" })}
@@ -1085,6 +1093,15 @@ export default function Home() {
       )}
     </main>
   );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function WeeklyCheck({ items, inventory, week, trips, dinnerTarget, setDinnerTarget, goals, setGoals, householdId, costcoThisWeek, setCostcoThisWeek, startReset, editRoutines, editMeal, viewRecipe, open, aiRequest }: any) {
+  const [draft, setDraft] = useState(goals); const [person, setPerson] = useState<'alex' | 'nathalia'>('alex'); const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift'); const [date, setDate] = useState(week[0]?.date || ''); const [busy, setBusy] = useState(false);
+  const saveGoals = async () => { setBusy(true); try { await saveFoodGoals(draft, householdId); setGoals(draft); } finally { setBusy(false); } };
+  const addSchedule = async () => { await createScheduleException({ personId: person, kind, date, title: kind.replace('_', ' ') }, householdId); };
+  const generate = async () => { setBusy(true); try { await requestAiPlan(week[0].date, seasonForMonth(new Date(`${week[0].date}T12:00:00`).getMonth()), householdId); } finally { setBusy(false); } };
+  return <section className="weekly-check"><header><p className="eyebrow">WEEKEND RITUAL</p><h2>Weekly check</h2><p>Set the exceptions. MercaSync handles the routine.</p></header><section><h3>1. Confirm what matters</h3><button onClick={() => open('Inventory')}>{inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length || 'No'} inventory checks →</button><button onClick={editRoutines}>Breakfast & lunch routines →</button></section><section><h3>2. Shape the week</h3><label>Dinners to cook<div className="stepper"><button onClick={() => setDinnerTarget(Math.max(0, dinnerTarget - 1))}>−</button><output>{dinnerTarget}</output><button onClick={() => setDinnerTarget(Math.min(6, dinnerTarget + 1))}>＋</button></div></label><label><input type="checkbox" checked={draft.proteinForward} onChange={(event) => setDraft({ ...draft, proteinForward: event.target.checked })}/> Protein-forward</label><label><input type="checkbox" checked={draft.vegetablesDaily} onChange={(event) => setDraft({ ...draft, vegetablesDaily: event.target.checked })}/> Vegetables daily</label><label>Flavor & goals<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })}/></label><button onClick={saveGoals} disabled={busy}>Save food direction</button></section><section><h3>3. Add schedule exception</h3><select value={person} onChange={(event) => setPerson(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select><select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}><option value="late_shift">Working late</option><option value="work_trip">Work trip</option><option value="away">Away</option><option value="holiday">Holiday</option><option value="day_off">Day off</option></select><input type="date" value={date} onChange={(event) => setDate(event.target.value)}/><button onClick={addSchedule}>Add schedule change</button></section><section><h3>4. Shopping dates</h3>{trips.map((trip: ShoppingTrip) => <label key={trip.store}>{trip.store}<input type="date" value={trip.date} onChange={(event) => saveShoppingTrip(trip.store, event.target.value, week[0].date, householdId)}/></label>)}<label><input type="checkbox" checked={costcoThisWeek} onChange={(event) => setCostcoThisWeek(event.target.checked)}/> Costco this week</label></section><button className="finish-reset" disabled={busy} onClick={generate}>{busy ? 'Building…' : 'Build our week'}</button>{aiRequest?.status === 'completed' && <button className="reset-secondary" onClick={startReset}>Review & approve week →</button>}<div className="week-at-glance"><h3>Your week</h3><div className="simple-week">{week.map((day) => <article key={day.date}><span>{day.dayLabel}<b>{day.dateLabel}</b></span><button onClick={() => day.meal.recipeId && viewRecipe(day.meal.recipeId)}>{day.meal.title}</button><small>{day.meal.servings} servings</small><button className="change" onClick={() => editMeal(day.date)}>Change</button></article>)}</div></div></section>;
 }
 
 function SimplePlanView({

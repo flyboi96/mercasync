@@ -457,6 +457,8 @@
   .bottom-nav small { font-size: 10px !important; }
 }
 
+.weekly-check { display:grid; gap:14px; }.weekly-check>header,.weekly-check>section { display:grid; gap:10px; padding:18px; border:1px solid var(--line); border-radius:16px; background:#fff; }.weekly-check h2,.weekly-check h3{margin:0;font-family:Georgia,serif}.weekly-check p{margin:0;color:var(--muted)}.weekly-check label{display:grid;gap:7px;font-weight:800}.weekly-check input,.weekly-check select,.weekly-check textarea{width:100%;min-height:48px;padding:10px;border:1px solid var(--line);border-radius:11px;font-size:16px}.weekly-check label>input[type=checkbox]{width:24px;min-height:24px}.weekly-check button{min-height:48px;border:1px solid var(--green);border-radius:11px;color:var(--green);background:#fff;font-weight:850}.weekly-check .finish-reset{color:#fff;background:var(--coral)}
+
 /* Practical planning controls */
 .meal { border: 0; text-align: left; cursor: pointer; font: inherit; }
 .meal-title-button { display: block; width: 100%; padding: 3px 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
