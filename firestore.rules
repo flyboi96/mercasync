@@ -373,7 +373,7 @@ service cloud.firestore {
         allow update: if isHouseholdMember(householdId)
           && resource.data.requestedBy == request.auth.uid
           && resource.data.status == 'pending'
-          && request.resource.data.status == 'failed'
+          && (request.resource.data.status == 'failed' || request.resource.data.status == 'completed')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'errorMessage', 'completedAt'])
           && request.resource.data.completedAt == request.time;
         allow delete: if false;
@@ -381,12 +381,16 @@ service cloud.firestore {
 
       match /aiPlanningBriefs/{weekStart} {
         allow read: if isHouseholdMember(householdId);
-        allow create, update, delete: if false;
+        allow create, update: if isHouseholdMember(householdId)
+          && request.resource.data.weekStart == weekStart;
+        allow delete: if false;
       }
 
       match /aiWeeklyDrafts/{weekStart} {
         allow read: if isHouseholdMember(householdId);
-        allow create, delete: if false;
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.weekStart == weekStart;
+        allow delete: if false;
         allow update: if isHouseholdMember(householdId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt'])
           && (request.resource.data.status == 'applied' || request.resource.data.status == 'dismissed')
@@ -396,7 +400,9 @@ service cloud.firestore {
 
       match /aiRecipeProposals/{proposalId} {
         allow read: if isHouseholdMember(householdId);
-        allow create, delete: if false;
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.status == 'proposed';
+        allow delete: if false;
         allow update: if isHouseholdMember(householdId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt'])
           && (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected')
