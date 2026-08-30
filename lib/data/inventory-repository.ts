@@ -23,14 +23,7 @@ export function subscribeToInventory(
     onChange(STARTER_INVENTORY);
     return () => undefined;
   }
-  let bootstrapping = false;
-  return onSnapshot(inventoryCollection(householdId), async (snapshot) => {
-    if (snapshot.empty && !bootstrapping) {
-      bootstrapping = true;
-      try { await seedStarterInventory(householdId); }
-      catch (error) { onError(error instanceof Error ? error : new Error('Could not create starter inventory.')); }
-      return;
-    }
+  return onSnapshot(inventoryCollection(householdId), (snapshot) => {
     onChange(snapshot.docs.map((entry) => {
       const data = entry.data();
       return {
@@ -43,18 +36,6 @@ export function subscribeToInventory(
       } satisfies InventoryItem;
     }).sort((a, b) => a.name.localeCompare(b.name)));
   }, onError);
-}
-
-async function seedStarterInventory(householdId?: string) {
-  const { auth, db } = getFirebaseServices();
-  if (!auth.currentUser) throw new Error('Sign in before creating inventory.');
-  const resolvedHouseholdId = householdId || firebaseHouseholdId();
-  const batch = writeBatch(db);
-  STARTER_INVENTORY.forEach((item) => batch.set(
-    doc(db, 'households', resolvedHouseholdId, 'inventory', inventoryDocumentId(item)),
-    { ...item, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() },
-  ));
-  await batch.commit();
 }
 
 export async function confirmInventoryItem(item: InventoryItem, householdId?: string) {
