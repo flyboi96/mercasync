@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalItemId, convertQuantity, normalizeUnit, unitDimension } from './units';
+import { canonicalItemId, convertItemQuantity, convertQuantity, normalizeUnit, unitDimension } from './units';
 
 describe('ingredient normalization', () => {
   it('normalizes common names and unit spellings', () => {
@@ -12,6 +12,10 @@ describe('ingredient normalization', () => {
     expect(convertQuantity(2, 'lb', 'oz')).toBe(32);
     expect(convertQuantity(1, 'cup', 'tbsp')).toBe(16);
     expect(convertQuantity(6, 'tbsp', 'cup')).toBe(0.38);
+  });
+
+  it('converts a known ingredient between recipe measures', () => {
+    expect(convertItemQuantity('almonds', 5, 'oz', 'cup')).toBe(1);
   });
 
   it('refuses unsafe conversions between unrelated dimensions', () => {

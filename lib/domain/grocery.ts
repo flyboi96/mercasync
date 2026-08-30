@@ -2,7 +2,7 @@ import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
 import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
 import { RECURRING_FOODS, recurringFoodOccurrencesForWeek, type RecurringFood } from './recurring-consumption';
-import { canonicalItemId, convertQuantity, normalizeUnit, unitDimension } from './units';
+import { canonicalItemId, convertItemQuantity, normalizeUnit, unitDimension } from './units';
 
 export type GroceryNeed = {
   id: string;
@@ -58,13 +58,16 @@ export function buildGroceryNeeds(
   const addRequirement = (ingredient: { itemId: string; name: string; quantity: number; unit: string; store: 'king_soopers' | 'costco' }, scale: number, source: string) => {
     const itemId = canonicalItemId(ingredient.itemId || ingredient.name);
     const unit = normalizeUnit(ingredient.unit);
-    const id = `${ingredient.store}:${itemId}:${unitDimension(unit)}:${unitDimension(unit) === 'unknown' ? unit : ''}`;
-    const existing = requirements.get(id);
+    const defaultId = `${itemId}:${unitDimension(unit)}:${unitDimension(unit) === 'unknown' ? unit : ''}`;
+    const compatible = [...requirements.entries()].find(([, need]) => need.itemId === itemId && convertItemQuantity(itemId, 1, unit, need.unit) != null);
+    const id = compatible?.[0] || defaultId;
+    const existing = compatible?.[1];
     const required = rounded(ingredient.quantity * scale);
     if (existing) {
-      const converted = convertQuantity(required, unit, existing.unit);
+      const converted = convertItemQuantity(itemId, required, unit, existing.unit);
       if (converted == null) return;
       existing.required = rounded(existing.required + converted);
+      if (ingredient.store === 'costco') existing.store = 'Costco';
       if (!existing.sources.includes(source)) existing.sources.push(source);
     } else {
       requirements.set(id, {
@@ -100,10 +103,10 @@ export function buildGroceryNeeds(
   const inventoryRemaining = inventory.map((item) => ({ item, quantity: effectiveInventoryQuantity(item, now) }));
   return [...requirements.values()]
     .map((need) => {
-      const match = inventoryRemaining.find(({ item }) => canonicalItemId(item.itemId) === need.itemId && convertQuantity(1, item.unit, need.unit) != null);
-      const available = match ? convertQuantity(match.quantity, match.item.unit, need.unit) || 0 : 0;
+      const match = inventoryRemaining.find(({ item }) => canonicalItemId(item.itemId) === need.itemId && convertItemQuantity(need.itemId, 1, item.unit, need.unit) != null);
+      const available = match ? convertItemQuantity(need.itemId, match.quantity, match.item.unit, need.unit) || 0 : 0;
       const inventoryUsed = Math.min(need.required, available);
-      if (match) match.quantity = convertQuantity(rounded(available - inventoryUsed), need.unit, match.item.unit) || 0;
+      if (match) match.quantity = convertItemQuantity(need.itemId, rounded(available - inventoryUsed), need.unit, match.item.unit) || 0;
       return {
         id: need.id,
         itemId: need.itemId,

@@ -42,6 +42,16 @@ describe('deterministic grocery calculation', () => {
     expect((needs.find((need) => need.itemId === 'deli-turkey')?.quantity || 0) - (baseline.find((need) => need.itemId === 'deli-turkey')?.quantity || 0)).toBe(24);
   });
 
+  it('combines the same ingredient before choosing a store', () => {
+    const recurring = [
+      { id: 'almonds-king', name: 'Almonds', kind: 'item' as const, timesPerWeek: 1, ingredient: { itemId: 'almonds', name: 'Almonds', quantity: 2, unit: 'oz', store: 'king_soopers' as const } },
+      { id: 'almonds-costco', name: 'Almonds', kind: 'item' as const, timesPerWeek: 1, ingredient: { itemId: 'almonds', name: 'Almonds', quantity: 3, unit: 'oz', store: 'costco' as const } },
+    ];
+    const almonds = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [], friday, recurring).filter((need) => need.itemId === 'almonds');
+    expect(almonds).toHaveLength(1);
+    expect(almonds[0]).toMatchObject({ quantity: 1.5, unit: 'cup', store: 'Costco' });
+  });
+
   it('subtracts compatible inventory estimates and removes fully covered needs', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
       { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 6.5, unit: 'cup', confidence: 100, lastConfirmedAt: null },
