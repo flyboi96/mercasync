@@ -23,7 +23,9 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Lunch and dinner overrides with recipe, leftovers, eating-out, skip, and serving controls
 - Full recipe editing and deletion from the shared recipe detail view
 - Per-week grocery quantity corrections and removal that survive automatic recalculation
-- ChatGPT Kitchen with shared nutrition goals, inventory/schedule/season-aware planning briefs, reviewable recipe proposals, and explicit approval before grocery impact
+- Smart weekly planning with immediate rule-based attention signals plus AI-enhanced schedule, inventory, prep, nutrition, shopping, and recipe recommendations
+- Explainable store routing: Costco only for compatible, durable bulk packages; King Soopers for produce, small quantities, and immediate needs
+- ChatGPT Kitchen with shared nutrition goals and reviewable recipe proposals, with explicit approval before grocery impact
 - Real inventory creation for foods already at home
 - Tap any dinner in Plan or Calendar to cook another recipe, use leftovers, eat out, or skip it; servings and groceries update together
 - Add shared recipes with ingredients, steps, serving size, and an explicit Costco preference for durable bulk ingredients
@@ -86,7 +88,7 @@ and preview the exact static output with `npm run preview:pages`.
 
 ## Secure ChatGPT recipe automation
 
-The PWA never receives an OpenAI key. Recipe requests are stored in Firestore,
+The PWA never receives an OpenAI key. Smart-plan requests are stored in Firestore,
 then `.github/workflows/ai-recipes.yml` processes them hourly and creates three
 reviewable proposals. Sunday’s run also generates seasonal proposals
 automatically. Add these repository settings before enabling the workflow:

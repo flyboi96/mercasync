@@ -117,6 +117,15 @@ Added after the original audit:
 
 The UI, Firestore rules, and worker are deployed independently from credentials. Until `OPENAI_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON` are configured as GitHub Actions secrets, requests remain safely pending and no OpenAI call occurs.
 
+## Version 0.18 smart household planning update
+
+- The Plan screen now shows a compact mobile-first briefing with the few schedule, inventory, and shopping decisions that need attention.
+- Smart-plan automation uses current groceries in addition to goals, inventory, recipes, schedule exceptions, and season. Its structured result contains a weekly summary, three cross-functional recommendations, and three reviewable recipe proposals.
+- The local briefing remains useful without OpenAI; deterministic signals appear immediately while an enhanced AI brief is pending or unavailable.
+- Store optimization now validates package units, protects fresh produce from inappropriate bulk routing, and covers more durable/freezable staples.
+- Grocery rows separate the essential quantity/source line from an expandable “Why here?” explanation and retain one-tap store correction.
+- AI recommendations navigate to the relevant human-controlled surface and never directly mutate schedule, inventory, groceries, or meal plans.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.
