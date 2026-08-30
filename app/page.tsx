@@ -60,6 +60,7 @@ import {
 } from "@/lib/data/shopping-trip-repository";
 import {
   approveAiProposal,
+  formatRecipeIdea,
   rejectAiProposal,
   requestAiPlan,
   requestAiRecipes,
@@ -3476,6 +3477,26 @@ function RecipeCreator({
   );
   const [steps, setSteps] = useState(existing?.instructions.join("\n") || "");
   const [saving, setSaving] = useState(false);
+  const [idea, setIdea] = useState("");
+  const [formatting, setFormatting] = useState(false);
+  const formatIdea = async () => {
+    setFormatting(true);
+    try {
+      const formatted = await formatRecipeIdea(idea, householdId);
+      setName(formatted.name);
+      setMealType(formatted.mealType);
+      setMinutes(formatted.effortMinutes);
+      setServings(formatted.servings);
+      setDescription(formatted.description);
+      setIngredients(formatted.ingredients.map((item) => `${item.name} | ${item.quantity} | ${item.unit} | ${item.store === "costco" ? "Costco" : "King"}`).join("\n"));
+      setSteps(formatted.instructions.join("\n"));
+      notify("Recipe formatted. Review it, then save it to the library.");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not format that recipe idea.");
+    } finally {
+      setFormatting(false);
+    }
+  };
   const save = async () => {
     const parsedIngredients = ingredients
       .split("\n")
@@ -3565,6 +3586,7 @@ function RecipeCreator({
             ×
           </button>
         </div>
+        {!existing && <section className="recipe-idea-helper"><p className="eyebrow">QUICK IDEA</p><h3>Describe it naturally</h3><textarea value={idea} onChange={(event) => setIdea(event.target.value)} placeholder="My work sandwich: 2 slices sourdough, 3 slices turkey, 1 slice Swiss, sliced jarred jalapeños."/><button className="save-schedule" disabled={formatting || !idea.trim()} onClick={formatIdea}>{formatting ? "Formatting…" : "Format with AI"}</button><small>AI fills the recipe below; you review and save it.</small></section>}
         <label>
           Recipe name
           <input

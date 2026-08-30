@@ -8,6 +8,34 @@ import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@
 
 const household = (householdId?: string) => householdId || firebaseHouseholdId();
 
+export type FormattedRecipeIdea = {
+  name: string;
+  mealType: 'lunch' | 'dinner';
+  description: string;
+  cuisine: string;
+  protein: string;
+  method: string;
+  effortMinutes: number;
+  servings: number;
+  tags: string[];
+  ingredients: Array<{ name: string; quantity: number; unit: string; store: 'king_soopers' | 'costco' }>;
+  instructions: string[];
+};
+
+export async function formatRecipeIdea(idea: string, householdId?: string): Promise<FormattedRecipeIdea> {
+  if (!usesFirebaseBackend()) throw new Error('Recipe formatting is available when Firebase is configured.');
+  const cleanIdea = idea.trim();
+  if (!cleanIdea) throw new Error('Describe the recipe first.');
+  const { auth } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in first.');
+  const dispatchUrl = process.env.NEXT_PUBLIC_AI_DISPATCH_URL;
+  if (!dispatchUrl) throw new Error('Immediate AI dispatch is not configured.');
+  const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'format_recipe', brief: { idea: cleanIdea, householdId: household(householdId), storePolicy: 'Prefer Costco for durable bulk staples. Prefer King Soopers for produce and perishable items.' } }) });
+  const data = await response.json().catch(() => null) as { recipe?: FormattedRecipeIdea; error?: string } | null;
+  if (!response.ok || !data?.recipe) throw new Error(data?.error || 'Could not format that recipe idea.');
+  return data.recipe;
+}
+
 export function subscribeToFoodGoals(householdId: string | undefined, onChange: (goals: HouseholdFoodGoals) => void, onError: (error: Error) => void): Unsubscribe {
   if (!usesFirebaseBackend()) { onChange(DEFAULT_FOOD_GOALS); return () => undefined; }
   const { db } = getFirebaseServices();
