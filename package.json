@@ -1,6 +1,6 @@
 {
   "name": "mercasync",
-  "version": "0.20.2",
+  "version": "0.21.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -20,7 +20,9 @@
     "firebase:seed": "node scripts/seed-firebase-emulators.mjs",
     "firebase:verify": "node scripts/verify-firebase-emulators.mjs",
     "ai:plan": "node scripts/generate-ai-recipes.mjs",
-    "ai:recipes": "node scripts/generate-ai-recipes.mjs"
+    "ai:recipes": "node scripts/generate-ai-recipes.mjs",
+    "ai:dispatch:dev": "wrangler dev --config wrangler.ai-dispatch.jsonc --port 8788",
+    "ai:dispatch:deploy": "wrangler deploy --config wrangler.ai-dispatch.jsonc"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

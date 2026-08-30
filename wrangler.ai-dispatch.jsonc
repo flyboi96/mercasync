@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mercasync-ai-dispatch",
+  "main": "workers/ai-dispatch.ts",
+  "compatibility_date": "2026-08-29",
+  "workers_dev": true,
+  "vars": {
+    "GITHUB_OWNER": "flyboi96",
+    "GITHUB_REPO": "mercasync",
+    "GITHUB_REF": "main",
+    "ALLOWED_FIREBASE_UIDS": "He9wmZ0cu8MxrmTICPPifjtCNu63,FLiNEBJ1KWfODddIR5xGBSxxp1x2",
+    "ALLOWED_ORIGINS": "https://flyboi96.github.io,http://localhost:3000,http://localhost:5173"
+  }
+}

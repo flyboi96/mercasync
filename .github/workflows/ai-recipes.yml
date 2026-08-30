@@ -2,7 +2,6 @@ name: Generate smart household plans
 
 on:
   schedule:
-    - cron: '17 * * * *'
     - cron: '0 15 * * 0'
   workflow_dispatch:
 

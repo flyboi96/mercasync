@@ -25,6 +25,7 @@ jobs:
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
       NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID }}
+      NEXT_PUBLIC_AI_DISPATCH_URL: ${{ vars.NEXT_PUBLIC_AI_DISPATCH_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

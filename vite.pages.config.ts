@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
     NEXT_PUBLIC_FIREBASE_APP_ID: env.NEXT_PUBLIC_FIREBASE_APP_ID,
     NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID:
       env.NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID || 'mercasync-home',
+    NEXT_PUBLIC_AI_DISPATCH_URL: env.NEXT_PUBLIC_AI_DISPATCH_URL || '',
   };
 
   return {
