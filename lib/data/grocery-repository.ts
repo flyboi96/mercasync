@@ -51,6 +51,7 @@ export async function setGroceryItemPurchased(
   itemId: string,
   checked: boolean,
   householdId?: string,
+  actualQuantity?: number,
 ) {
   if (!usesFirebaseBackend()) return;
   const { auth, db } = getFirebaseServices();
@@ -67,7 +68,7 @@ export async function setGroceryItemPurchased(
     const purchaseRef = doc(db, 'households', resolvedHouseholdId, 'inventoryTransactions', `${weekStart}--${inventoryDocumentId(item)}`);
     const inventorySnapshot = await transaction.get(inventoryRef);
     const currentQuantity = inventorySnapshot.data()?.quantity || 0;
-    const purchasedQuantity = checked ? item.quantity : item.purchasedQuantity;
+    const purchasedQuantity = checked ? (actualQuantity && actualQuantity > 0 ? actualQuantity : item.quantity) : item.purchasedQuantity;
     const nextQuantity = Math.max(0, Math.round((currentQuantity + (checked ? purchasedQuantity : -purchasedQuantity)) * 100) / 100);
     const nextItems = items.map((candidate) => candidate.id === itemId ? {
       ...candidate,

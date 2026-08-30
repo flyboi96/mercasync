@@ -1,7 +1,7 @@
 import type { Recipe } from './recipe';
 import type { PlanningDay } from './schedule';
 import { effectiveInventoryQuantity, type InventoryItem } from './inventory';
-import { RECURRING_FOODS, recurringFoodOccurrences, type RecurringFood } from './recurring-consumption';
+import { RECURRING_FOODS, recurringFoodOccurrencesForWeek, type RecurringFood } from './recurring-consumption';
 import { canonicalItemId, convertQuantity, normalizeUnit, unitDimension } from './units';
 
 export type GroceryNeed = {
@@ -87,7 +87,7 @@ export function buildGroceryNeeds(
   }
 
   for (const food of recurringFoods) {
-    const occurrences = recurringFoodOccurrences(food);
+    const occurrences = recurringFoodOccurrencesForWeek(food, week);
     if (food.kind === 'item' && food.ingredient) addRequirement(food.ingredient, occurrences, food.name);
     if (food.kind === 'recipe' && food.recipeId) {
       const recipe = recipesById.get(food.recipeId);

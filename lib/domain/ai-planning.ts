@@ -1,4 +1,5 @@
 import type { Recipe } from './recipe';
+export type { AiWeeklyDraft, WeeklyMealDraftSlot } from './weekly-draft';
 
 export type HouseholdFoodGoals = {
   proteinForward: boolean;

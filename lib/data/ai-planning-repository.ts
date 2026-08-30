@@ -3,6 +3,7 @@
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
 import { DEFAULT_FOOD_GOALS, type AiGenerationRequest, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
+import type { AiWeeklyDraft } from '@/lib/domain/weekly-draft';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 const household = (householdId?: string) => householdId || firebaseHouseholdId();
@@ -71,6 +72,20 @@ export function subscribeToAiPlanningBrief(householdId: string | undefined, week
   return onSnapshot(doc(db, 'households', household(householdId), 'aiPlanningBriefs', weekStart), (snapshot) => {
     onChange(snapshot.exists() ? snapshot.data() as AiPlanningBrief : null);
   }, onError);
+}
+
+export function subscribeToAiWeeklyDraft(householdId: string | undefined, weekStart: string, onChange: (draft: AiWeeklyDraft | null) => void, onError: (error: Error) => void): Unsubscribe {
+  if (!usesFirebaseBackend()) { onChange(null); return () => undefined; }
+  const { db } = getFirebaseServices();
+  return onSnapshot(doc(db, 'households', household(householdId), 'aiWeeklyDrafts', weekStart), (snapshot) => {
+    onChange(snapshot.exists() ? snapshot.data() as AiWeeklyDraft : null);
+  }, onError);
+}
+
+export async function reviewAiWeeklyDraft(weekStart: string, status: 'applied' | 'dismissed', householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const { auth, db } = getFirebaseServices(); if (!auth.currentUser) throw new Error('Sign in first.');
+  await updateDoc(doc(db, 'households', household(householdId), 'aiWeeklyDrafts', weekStart), { status, reviewedBy: auth.currentUser.uid, reviewedAt: serverTimestamp() });
 }
 
 export async function approveAiProposal(proposal: AiRecipeProposal, householdId?: string) {
