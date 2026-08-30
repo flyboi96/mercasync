@@ -5436,6 +5436,7 @@ function GroceriesView({
 }) {
   const visible = items.filter((item) => item.store === store);
   const remaining = visible.filter((item) => !item.checked).length;
+  const completed = visible.length - remaining;
   const trip = trips.find((candidate) => candidate.store === store);
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState("");
@@ -5589,7 +5590,11 @@ function GroceriesView({
           </p>
           <h2>{store}</h2>
         </div>
-        <p>{remaining} left</p>
+        <div className="shopping-progress" aria-label={`${completed} of ${visible.length} items checked`}>
+          <strong>{completed}/{visible.length}</strong>
+          <small>{remaining ? `${remaining} left` : "Done"}</small>
+          <span><i style={{ width: `${visible.length ? (completed / visible.length) * 100 : 0}%` }} /></span>
+        </div>
       </div>
       <label className="shopping-date">
         <span>
