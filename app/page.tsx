@@ -206,7 +206,7 @@ export default function Home() {
   useEffect(() => {
     if (!firebaseEnabled || !auth.session || !week[0] || !inventoryReady) return;
     syncGroceryRun(calculatedNeeds, week[0].date, auth.session.householdId)
-      .catch(() => notify('Could not refresh the shared grocery run.'));
+      .catch(() => undefined);
   }, [auth.session, calculatedNeeds, firebaseEnabled, inventoryReady, notify, week]);
   useEffect(() => {
     if (!firebaseEnabled || !auth.session || !week[0]) return;
@@ -488,7 +488,7 @@ function SignInView({ error }: { error: string }) {
 }
 function SimpleRecipeLab({ goals, proposals, inventory, week, aiRequest, householdId, onGoals, onApproved, notify }: { goals: HouseholdFoodGoals; proposals: AiRecipeProposal[]; inventory: InventoryItem[]; week: PlanningDay[]; aiRequest: AiGenerationRequest | null; householdId?: string; onGoals: (goals: HouseholdFoodGoals) => void; onApproved: (recipe: Recipe) => void; notify: (message: string) => void }) {
   const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(goals); const [working, setWorking] = useState(false); const [localError, setLocalError] = useState('');
-  const context = inventory.filter((item) => item.quantity > 0 && effectiveInventoryConfidence(item) >= 80).slice(0, 4);
+  const context: InventoryItem[] = [];
   const save = async () => { setWorking(true); try { await saveFoodGoals(draft, householdId); onGoals(draft); setEditing(false); notify('AI instructions saved.'); } catch { notify('Could not save the instructions.'); } finally { setWorking(false); } };
   const generate = async () => { setWorking(true); setLocalError(''); try { await requestAiRecipes(week[0].date, seasonForMonth(new Date().getMonth()), householdId); notify('Generation started.'); } catch (error) { const message = error instanceof Error ? error.message : 'Generation could not start.'; setLocalError(message); notify(message); } finally { setWorking(false); } };
   const review = async (proposal: AiRecipeProposal, approved: boolean) => { setWorking(true); try { if (approved) { await approveAiProposal(proposal, householdId); onApproved(proposal.recipe); notify('Recipe added.'); } else { await rejectAiProposal(proposal.id, householdId); notify('Idea dismissed.'); } } catch { notify('Could not save that decision.'); } finally { setWorking(false); } };
@@ -688,7 +688,7 @@ function InventoryView({ inventory, householdId, notify }: { inventory: Inventor
     if (!editing) return;
     const next = Number(quantity);
     if (!Number.isFinite(next) || next < 0) { notify('Enter a quantity of zero or more.'); return; }
-    try { await setInventoryQuantity(editing, next, householdId); notify(`${editing.name} corrected and confirmed.`); setEditing(null); }
+    try { await setInventoryQuantity(editing, next, householdId); notify(next === 0 ? `${editing.name} removed from inventory.` : `${editing.name} corrected and confirmed.`); setEditing(null); }
     catch { notify(`Could not update ${editing.name}.`); }
   };
   const addItem = async () => {

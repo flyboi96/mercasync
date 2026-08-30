@@ -431,7 +431,7 @@ service cloud.firestore {
         allow read: if isHouseholdMember(householdId);
         allow create, update: if isHouseholdMember(householdId)
           && validInventory(request.resource.data);
-        allow delete: if false;
+        allow delete: if isHouseholdMember(householdId);
       }
 
       match /groceryRuns/{weekStart} {
