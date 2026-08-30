@@ -1,7 +1,7 @@
 'use client';
 
 import { doc, onSnapshot, runTransaction, serverTimestamp, type Unsubscribe } from 'firebase/firestore';
-import { groceryNeedsFingerprint, mergeGroceryRunItems, type GroceryNeed, type GroceryRunItem } from '@/lib/domain/grocery';
+import { dedupeGroceryRunItems, groceryNeedsFingerprint, mergeGroceryRunItems, type GroceryNeed, type GroceryRunItem } from '@/lib/domain/grocery';
 import { inventoryDocumentId } from '@/lib/domain/inventory';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
@@ -31,9 +31,10 @@ export async function syncGroceryRun(needs: GroceryNeed[], weekStart: string, ho
   const fingerprint = groceryNeedsFingerprint(needs);
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(runRef);
-    if (snapshot.data()?.calculationFingerprint === fingerprint) return;
     const existing = snapshot.exists() ? snapshot.data().items as GroceryRunItem[] : [];
-    const items = mergeGroceryRunItems(needs, existing);
+    const normalizedExisting = dedupeGroceryRunItems(existing);
+    if (snapshot.data()?.calculationFingerprint === fingerprint && normalizedExisting.length === existing.length) return;
+    const items = mergeGroceryRunItems(needs, normalizedExisting);
     transaction.set(runRef, {
       weekStart,
       items,
@@ -108,7 +109,7 @@ export async function addManualGroceryItem(weekStart: string, item: { name: stri
     const unit = normalizeUnit(item.unit);
     const id = `manual:${item.store}:${itemId}:${unit}`;
     const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, note: item.note?.trim() || '' };
-    const items = [...existing.filter((candidate) => candidate.id !== id), manual].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
+    const items = dedupeGroceryRunItems([...existing.filter((candidate) => candidate.id !== id), manual]);
     transaction.set(runRef, { weekStart, items, calculationFingerprint: snapshot.data()?.calculationFingerprint || 'manual', createdBy: snapshot.data()?.createdBy || auth.currentUser!.uid, createdAt: snapshot.data()?.createdAt || serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
   });
 }

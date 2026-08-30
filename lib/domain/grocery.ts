@@ -44,7 +44,23 @@ export function mergeGroceryRunItems(needs: GroceryNeed[], existing: GroceryRunI
   const pending = needs
     .filter((need) => !checkedIds.has(need.id))
     .map((need) => ({ ...need, checked: false, purchasedQuantity: 0, purchasedAt: null }));
-  return [...pending, ...preserved].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
+  return dedupeGroceryRunItems([...pending, ...preserved]);
+}
+
+// A manual reminder and a calculated recipe need for the same product should
+// still be one grocery row. Prefer the calculated unit when the manual row is
+// a vague "each" so the shopper can edit one precise quantity.
+export function dedupeGroceryRunItems(items: GroceryRunItem[]) {
+  const groups = new Map<string, GroceryRunItem[]>();
+  for (const item of items) {
+    const key = `${item.store}:${canonicalItemId(item.itemId || item.name)}`;
+    groups.set(key, [...(groups.get(key) || []), item]);
+  }
+  return [...groups.values()].map((group) => {
+    const primary = group.find((item) => !item.manual && item.unit !== 'each') || group.find((item) => !item.manual) || group[0];
+    const sources = [...new Set(group.flatMap((item) => item.sources))];
+    return { ...primary, sources, checked: group.some((item) => item.checked), purchasedQuantity: group.find((item) => item.checked)?.purchasedQuantity || primary.purchasedQuantity, purchasedAt: group.find((item) => item.checked)?.purchasedAt || primary.purchasedAt };
+  }).sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
 }
 
 export function buildGroceryNeeds(

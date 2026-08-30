@@ -34,7 +34,7 @@ export function subscribeToInventory(
         confidence: data.confidence,
         lastConfirmedAt: timestampToIso(data.lastConfirmedAt),
       } satisfies InventoryItem;
-    }).sort((a, b) => a.name.localeCompare(b.name)));
+    }).filter((item) => item.quantity > 0).sort((a, b) => a.name.localeCompare(b.name)));
   }, onError);
 }
 
