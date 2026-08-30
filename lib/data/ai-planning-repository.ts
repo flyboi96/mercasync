@@ -1,6 +1,6 @@
 'use client';
 
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
 import { DEFAULT_FOOD_GOALS, type AiGenerationRequest, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import type { AiWeeklyDraft } from '@/lib/domain/weekly-draft';
@@ -44,11 +44,27 @@ export async function requestAiRecipes(weekStart: string, season: string, househ
   try {
     const dispatchUrl = process.env.NEXT_PUBLIC_AI_DISPATCH_URL;
     if (!dispatchUrl) throw new Error('Immediate AI dispatch is not configured.');
-    const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart }) });
+    const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ brief: { weekStart, season, storePolicy: 'Prefer Costco for durable bulk staples. Prefer King Soopers for produce and perishable items.', goals: DEFAULT_FOOD_GOALS } }) });
     if (!response.ok) {
       const detail = await response.json().catch(() => null) as { error?: string } | null;
-      throw new Error(detail?.error || 'Could not start the AI generation worker.');
+      throw new Error(detail?.error || 'Could not generate the AI plan.');
     }
+    const data = await response.json() as { plan?: { headline?: string; summary?: string; recipes?: Array<Record<string, unknown>>; slots?: Array<Record<string, unknown>> } };
+    if (!data.plan?.recipes?.length || !data.plan.slots?.length) throw new Error('AI returned an incomplete plan. Please retry.');
+    const root = doc(db, 'households', household(householdId));
+    const batch = writeBatch(db);
+    const recipeIds = new Map<string, string>();
+    const recipes = data.plan.recipes.slice(0, 5).map((raw, index) => {
+      const name = String(raw.name || `New recipe ${index + 1}`); const id = `ai-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now().toString(36)}-${index}`;
+      recipeIds.set(name.toLowerCase(), id);
+      const recipe = { id, name, mealType: 'dinner' as const, description: String(raw.description || ''), cuisine: 'AI plan', protein: 'Mixed', method: 'Cook', effortMinutes: Math.max(5, Number(raw.effortMinutes) || 30), servings: 2, lateNightSuitable: Number(raw.effortMinutes) <= 25, tags: ['ai suggestion'], ingredients: Array.isArray(raw.ingredients) ? raw.ingredients.map((item: any) => ({ itemId: String(item.name || 'ingredient').toLowerCase().replace(/[^a-z0-9]+/g, '-'), name: String(item.name || 'Ingredient'), quantity: Number(item.quantity) || 1, unit: String(item.unit || 'each'), store: String(item.store).toLowerCase().includes('costco') ? 'costco' : 'king_soopers' })) : [], instructions: Array.isArray(raw.instructions) ? raw.instructions.map(String) : [], favorite: false, rating: 3, note: '', color: 'sage' };
+      batch.set(doc(root, 'aiRecipeProposals', id.slice(3)), { status: 'proposed', whyItFits: 'Generated from your current planner instructions.', inventoryHighlights: [], seasonalHighlights: [], recipe, model: 'gpt-5-mini', createdAt: serverTimestamp() }); return recipe;
+    });
+    const slots = data.plan.slots.slice(0, 14).map((raw) => ({ date: String(raw.date), mealType: raw.mealType === 'lunch' ? 'lunch' : 'dinner', recipeId: raw.recipeName ? recipeIds.get(String(raw.recipeName).toLowerCase()) || null : null, title: String(raw.title || 'Flexible meal'), servings: Math.max(0, Number(raw.servings) || 2), kind: ['recipe', 'leftovers', 'eat_out', 'skip'].includes(String(raw.kind)) ? String(raw.kind) : 'recipe', rationale: String(raw.rationale || '') }));
+    batch.set(doc(root, 'aiPlanningBriefs', weekStart), { weekStart, headline: data.plan.headline || 'Your weekly plan', summary: data.plan.summary || '', recommendations: [], model: 'gpt-5-mini', createdAt: serverTimestamp() });
+    batch.set(doc(root, 'aiWeeklyDrafts', weekStart), { weekStart, headline: data.plan.headline || 'Your weekly plan', summary: data.plan.summary || '', slots, recipes, warnings: [], status: 'proposed', model: 'gpt-5-mini', createdAt: serverTimestamp() });
+    batch.update(requestRef, { status: 'completed', completedAt: serverTimestamp() });
+    await batch.commit();
   } catch (error) {
     await updateDoc(requestRef, { status: 'failed', errorMessage: error instanceof Error ? error.message : 'Could not start generation.', completedAt: serverTimestamp() });
     throw error;

@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { inventoryDocumentId, STARTER_INVENTORY, type InventoryItem } from '@/lib/domain/inventory';
 import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
@@ -103,4 +103,11 @@ export async function addInventoryItem(name: string, quantity: number, unit: str
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before adding inventory.');
   await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), { ...item, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+}
+
+export async function deleteInventoryItem(item: InventoryItem, householdId?: string) {
+  if (!usesFirebaseBackend()) return;
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before deleting inventory.');
+  await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)));
 }

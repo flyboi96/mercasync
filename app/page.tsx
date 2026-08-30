@@ -10,7 +10,7 @@ import {
 import { saveCostcoWeek, saveDinnerTarget, saveMealPlan, subscribeToPlanningSettings, subscribeToSavedMealPlan } from '@/lib/data/meal-plan-repository';
 import { clearMealOverride, movePlannedMeal, saveMealOverride, subscribeToMealOverrides } from '@/lib/data/meal-override-repository';
 import { createRecipe, deleteRecipe, subscribeToRecipes, updateRecipe, updateRecipePreferences } from '@/lib/data/recipe-repository';
-import { addInventoryItem, confirmInventoryItem, confirmInventoryItems, setInventoryQuantity, subscribeToInventory } from '@/lib/data/inventory-repository';
+import { addInventoryItem, confirmInventoryItem, confirmInventoryItems, deleteInventoryItem, setInventoryQuantity, subscribeToInventory } from '@/lib/data/inventory-repository';
 import { deleteStorePreference, saveStorePreference, subscribeToStorePreferences } from '@/lib/data/store-preference-repository';
 import { deleteRecurringFood, saveRecurringProfile, subscribeToRecurringProfiles } from '@/lib/data/recurring-profile-repository';
 import { addManualGroceryItem, moveGroceryItem, removeGroceryItem, setGroceryItemPurchased, subscribeToGroceryRun, syncGroceryRun, updateGroceryQuantity } from '@/lib/data/grocery-repository';
@@ -706,6 +706,7 @@ function InventoryView({ inventory, householdId, notify }: { inventory: Inventor
     return true;
   });
   const confirmVisible = async () => { setConfirmingAll(true); try { await confirmInventoryItems(visible, householdId); notify(`${visible.length} inventory ${visible.length === 1 ? 'item' : 'items'} confirmed.`); } catch { notify('Could not confirm this inventory group.'); } finally { setConfirmingAll(false); } };
+  const removeInventory = async () => { if (!editing || !window.confirm(`Remove ${editing.name} from inventory?`)) return; try { await deleteInventoryItem(editing, householdId); setEditing(null); notify(`${editing.name} removed from inventory.`); } catch { notify('Could not remove that inventory item.'); } };
   return <section className="inventory-page"><div className="confidence-key"><span className="pulse" />Confidence falls 2% per day after confirmation and changes shopping quantities.</div>
     <div className="inventory-toolbar"><label><span>Find inventory</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search food or category" /></label><div className="inventory-filters">{([['review', 'Needs review'], ['low', 'Running low'], ['recent', 'Recent'], ['all', 'All']] as const).map(([value, label]) => <button className={filter === value ? 'active' : ''} key={value} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
     {duplicates.length > 0 && <div className="duplicate-warning" role="status"><strong>Possible duplicate inventory</strong><span>{duplicates.map((group) => group.map((item) => `${item.name} (${item.unit})`).join(' + ')).join(', ')}</span><small>Keep both only when the units represent separate packages.</small></div>}
