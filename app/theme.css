@@ -437,6 +437,26 @@
   .mobile-header { height: calc(76px + env(safe-area-inset-top)); }
 }
 
+/* iPhone-first planner: one clear column, 16px inputs, and thumb-sized actions. */
+@media (max-width: 720px) {
+  html { -webkit-text-size-adjust: 100%; }
+  .app-shell, .content { min-width: 0; }
+  .reset-sheet { width: 100vw; max-height: 100dvh; border-radius: 0; padding: max(16px, env(safe-area-inset-top)) 18px calc(96px + env(safe-area-inset-bottom)); }
+  .reset-steps { overflow-x: auto; grid-template-columns: repeat(6, 72px); justify-content: start; }
+  .reset-summary, .reset-dinners, .planner-schedule-editor { padding: 16px; border-radius: 16px; }
+  .planner-schedule-editor { display: grid; gap: 10px; margin-top: 12px; background: #fff3ef; }
+  .planner-schedule-editor > div { display: grid; gap: 10px; }
+  .planner-schedule-editor select, .planner-schedule-editor input, .reset-summary textarea { width: 100%; min-height: 50px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 16px; background: #fff; }
+  .reset-summary label { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+  .reset-summary label input[type=checkbox] { width: 24px; height: 24px; }
+  .reset-secondary, .finish-reset, .reset-footer button { min-height: 54px; font-size: 16px; }
+  .draft-review details { margin: 10px 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+  .draft-review summary { font-size: 16px; font-weight: 800; }
+  .draft-review li, .draft-review p { font-size: 15px; line-height: 1.5; }
+  .bottom-nav { grid-template-columns: repeat(5, 1fr) !important; }
+  .bottom-nav small { font-size: 10px !important; }
+}
+
 /* Practical planning controls */
 .meal { border: 0; text-align: left; cursor: pointer; font: inherit; }
 .meal-title-button { display: block; width: 100%; padding: 3px 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }

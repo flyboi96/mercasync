@@ -4261,6 +4261,10 @@ function WeekendReset({
   const [requesting, setRequesting] = useState(false);
   const [aiError, setAiError] = useState("");
   const [goalDraft, setGoalDraft] = useState(goals);
+  const [schedulePerson, setSchedulePerson] = useState<'alex' | 'nathalia'>('alex');
+  const [scheduleKind, setScheduleKind] = useState<ScheduleExceptionKind>('late_shift');
+  const [scheduleDate, setScheduleDate] = useState(week[0]?.date || '');
+  const addScheduleHere = async () => { try { await createScheduleException({ personId: schedulePerson, kind: scheduleKind, date: scheduleDate, endDate: null, title: scheduleKind.replace('_', ' ') }, householdId); notify('Schedule change saved.'); } catch { notify('Could not save that schedule change.'); } };
   const current = reviewItems[index];
   const weekEvents = events.filter((event) =>
     week.some((day) => scheduleExceptionApplies(event, day.date)),
@@ -4454,9 +4458,7 @@ function WeekendReset({
                 </div>
               ))}
             </div>
-            <button className="reset-secondary" onClick={onOpenCalendar}>
-              Edit work calendar
-            </button>
+            <div className="planner-schedule-editor"><strong>Add a schedule change</strong><div><select value={schedulePerson} onChange={(event) => setSchedulePerson(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select><select value={scheduleKind} onChange={(event) => setScheduleKind(event.target.value as ScheduleExceptionKind)}><option value="late_shift">Working late</option><option value="work_trip">Work trip</option><option value="away">Away</option><option value="holiday">Holiday</option><option value="day_off">Day off</option></select><input type="date" value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} /></div><button className="reset-secondary" onClick={addScheduleHere}>Add schedule change</button></div>
             <ResetFooter step={step} setStep={setStep} onNext={advance} />
           </>
         )}
