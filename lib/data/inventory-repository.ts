@@ -2,6 +2,7 @@
 
 import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { inventoryDocumentId, STARTER_INVENTORY, type InventoryItem } from '@/lib/domain/inventory';
+import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 function inventoryCollection(householdId?: string) {
@@ -85,9 +86,9 @@ export async function setInventoryQuantity(item: InventoryItem, quantity: number
 export async function addInventoryItem(name: string, quantity: number, unit: string, householdId?: string) {
   if (!usesFirebaseBackend()) return;
   const cleanName = name.trim();
-  const cleanUnit = unit.trim().toLowerCase();
+  const cleanUnit = normalizeUnit(unit);
   if (!cleanName || cleanName.length > 120 || !cleanUnit || !Number.isFinite(quantity) || quantity < 0) throw new Error('Enter a valid item, quantity, and unit.');
-  const item: InventoryItem = { itemId: cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), name: cleanName, quantity: Math.round(quantity * 100) / 100, unit: cleanUnit, confidence: 100, lastConfirmedAt: null };
+  const item: InventoryItem = { itemId: canonicalItemId(cleanName), name: cleanName, quantity: Math.round(quantity * 100) / 100, unit: cleanUnit, confidence: 100, lastConfirmedAt: null };
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before adding inventory.');
   await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), { ...item, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });

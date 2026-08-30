@@ -46,6 +46,13 @@ describe('deterministic grocery calculation', () => {
     expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 9, inventoryUsed: 1 });
   });
 
+  it('subtracts inventory measured in a compatible unit', () => {
+    const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
+      { itemId: 'salmon', name: 'Salmon', quantity: 16, unit: 'oz', confidence: 100, lastConfirmedAt: null },
+    ], friday, []);
+    expect(needs.some((need) => need.itemId === 'salmon')).toBe(false);
+  });
+
   it('discounts uncertain inventory instead of treating every estimate as exact', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
       { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 2, unit: 'cup', confidence: 50, lastConfirmedAt: null },

@@ -262,7 +262,8 @@ service cloud.firestore {
         && data.recipeName is string
         && data.servings is number
         && data.servings >= 0
-        && (data.status == 'cooked' || data.status == 'skipped')
+        && (data.status == 'cooked' || data.status == 'leftovers'
+          || data.status == 'eat_out' || data.status == 'skipped')
         && data.deductions is list
         && data.deductions.size() <= 50
         && data.completedBy == request.auth.uid

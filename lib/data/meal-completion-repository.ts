@@ -5,6 +5,7 @@ import { inventoryDocumentId } from '@/lib/domain/inventory';
 import { mealCompletionId, mealDeductions, type MealCompletion, type MealCompletionStatus, type MealTypeKey } from '@/lib/domain/meal-reconciliation';
 import type { Recipe } from '@/lib/domain/recipe';
 import type { PlanningDay } from '@/lib/domain/schedule';
+import type { InventoryItem } from '@/lib/domain/inventory';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 export function subscribeToMealCompletions(
@@ -24,6 +25,7 @@ export async function setMealCompletion(
   mealType: MealTypeKey,
   status: MealCompletionStatus | null,
   recipes: Recipe[],
+  inventory: InventoryItem[] = [],
   householdId?: string,
 ) {
   if (!usesFirebaseBackend()) return;
@@ -34,7 +36,7 @@ export async function setMealCompletion(
   const completionRef = doc(db, 'households', resolvedHouseholdId, 'mealCompletions', id);
   const ledgerRef = doc(db, 'households', resolvedHouseholdId, 'inventoryTransactions', `${id}--consumption`);
   const planned = mealType === 'lunch' ? day.lunch : day.meal;
-  const nextDeductions = status === 'cooked' ? mealDeductions(day, mealType, recipes) : [];
+  const nextDeductions = status === 'cooked' ? mealDeductions(day, mealType, recipes, inventory) : [];
 
   await runTransaction(db, async (transaction) => {
     const completionSnapshot = await transaction.get(completionRef);

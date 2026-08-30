@@ -14,4 +14,10 @@ describe('meal reconciliation', () => {
   it('uses a stable meal completion id', () => {
     expect(mealCompletionId('2026-08-31', 'lunch')).toBe('2026-08-31--lunch');
   });
+
+  it('converts deductions into the compatible inventory unit', () => {
+    const day = buildPlanningWeek([], friday)[0];
+    const deductions = mealDeductions(day, 'dinner', STARTER_RECIPES, [{ itemId: 'salmon', name: 'Salmon', quantity: 16, unit: 'oz', confidence: 100, lastConfirmedAt: null }]);
+    expect(deductions.find((item) => item.itemId === 'salmon')).toMatchObject({ quantity: 16, unit: 'oz' });
+  });
 });

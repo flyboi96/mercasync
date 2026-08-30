@@ -18,7 +18,7 @@ const DAILY_CONFIDENCE_DECAY = 2;
 const MINIMUM_CONFIDENCE = 10;
 
 export function inventoryDocumentId(item: Pick<InventoryItem, 'itemId' | 'unit'>) {
-  return `${item.itemId}--${item.unit}`.replaceAll('/', '-');
+  return `${canonicalItemId(item.itemId)}--${normalizeUnit(item.unit)}`.replaceAll('/', '-');
 }
 
 export function effectiveInventoryConfidence(item: InventoryItem, now = new Date()) {
@@ -41,3 +41,4 @@ export function correctedInventoryQuantity(quantity: number, correction: Invento
   if (correction === 'more') return Math.round(quantity * 150) / 100;
   return quantity;
 }
+import { canonicalItemId, normalizeUnit } from './units';

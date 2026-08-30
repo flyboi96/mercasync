@@ -4,6 +4,7 @@ import { doc, onSnapshot, runTransaction, serverTimestamp, type Unsubscribe } fr
 import { groceryNeedsFingerprint, mergeGroceryRunItems, type GroceryNeed, type GroceryRunItem } from '@/lib/domain/grocery';
 import { inventoryDocumentId } from '@/lib/domain/inventory';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
+import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
 
 function runDocument(weekStart: string, householdId?: string) {
   const { db } = getFirebaseServices();
@@ -107,9 +108,10 @@ export async function addManualGroceryItem(weekStart: string, item: { name: stri
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(runRef);
     const existing = snapshot.exists() ? snapshot.data().items as GroceryRunItem[] : [];
-    const itemId = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const id = `manual:${item.store}:${itemId}:${item.unit.trim().toLowerCase()}`;
-    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit: item.unit.trim().toLowerCase(), store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, note: item.note?.trim() || '' };
+    const itemId = canonicalItemId(cleanName);
+    const unit = normalizeUnit(item.unit);
+    const id = `manual:${item.store}:${itemId}:${unit}`;
+    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, note: item.note?.trim() || '' };
     const items = [...existing.filter((candidate) => candidate.id !== id), manual].sort((a, b) => a.store.localeCompare(b.store) || a.name.localeCompare(b.name));
     transaction.set(runRef, { weekStart, items, calculationFingerprint: snapshot.data()?.calculationFingerprint || 'manual', createdBy: snapshot.data()?.createdBy || auth.currentUser!.uid, createdAt: snapshot.data()?.createdAt || serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
   });
