@@ -1,6 +1,6 @@
 'use client';
 
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, writeBatch, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
 import { DEFAULT_FOOD_GOALS, type AiGenerationRequest, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import type { AiWeeklyDraft } from '@/lib/domain/weekly-draft';
@@ -62,7 +62,7 @@ export async function saveFoodGoals(goals: HouseholdFoodGoals, householdId?: str
 export function subscribeToAiProposals(householdId: string | undefined, onChange: (proposals: AiRecipeProposal[]) => void, onError: (error: Error) => void): Unsubscribe {
   if (!usesFirebaseBackend()) { onChange([]); return () => undefined; }
   const { db } = getFirebaseServices();
-  return onSnapshot(collection(db, 'households', household(householdId), 'aiRecipeProposals'), (snapshot) => onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as AiRecipeProposal).filter((proposal) => proposal.status === 'proposed')), onError);
+  return onSnapshot(query(collection(db, 'households', household(householdId), 'aiRecipeProposals'), where('status', '==', 'proposed')), (snapshot) => onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as AiRecipeProposal)), onError);
 }
 
 export async function requestAiRecipes(weekStart: string, season: string, householdId?: string, mode: 'ideas' | 'full_plan' = 'ideas') {
@@ -108,10 +108,9 @@ export const requestAiPlan = (weekStart: string, season: string, householdId?: s
 export function subscribeToAiRequests(householdId: string | undefined, weekStart: string, onChange: (request: AiGenerationRequest | null) => void, onError: (error: Error) => void): Unsubscribe {
   if (!usesFirebaseBackend()) { onChange(null); return () => undefined; }
   const { db } = getFirebaseServices();
-  return onSnapshot(collection(db, 'households', household(householdId), 'aiGenerationRequests'), (snapshot) => {
+  return onSnapshot(query(collection(db, 'households', household(householdId), 'aiGenerationRequests'), where('weekStart', '==', weekStart)), (snapshot) => {
     const requests = snapshot.docs
       .map((entry) => ({ id: entry.id, ...entry.data() }) as AiGenerationRequest)
-      .filter((request) => request.weekStart === weekStart)
       .sort((a, b) => (b.requestedAt?.toMillis?.() || 0) - (a.requestedAt?.toMillis?.() || 0));
     onChange(requests[0] || null);
   }, onError);

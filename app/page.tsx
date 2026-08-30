@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createScheduleException,
   deleteScheduleException,
@@ -94,6 +94,7 @@ import {
 import {
   buildGroceryNeeds,
   formatGroceryQuantity,
+  groceryNeedsFingerprint,
   type GroceryRunItem,
 } from "@/lib/domain/grocery";
 import {
@@ -165,6 +166,7 @@ type Grocery = {
   manual?: boolean;
   storeReason?: string;
   sources?: string[];
+  section?: string;
 };
 const fallbackGroceries: Grocery[] = [
   {
@@ -392,6 +394,14 @@ export default function Home() {
       week,
     ],
   );
+  // Grocery calculations can be recomputed during ordinary React renders.  Do
+  // not turn those renders into Firestore transactions: one sync per distinct
+  // week + grocery calculation is enough.
+  const grocerySyncKey = useMemo(
+    () => `${week[0]?.date || ""}:${groceryNeedsFingerprint(calculatedNeeds)}`,
+    [calculatedNeeds, week],
+  );
+  const lastGrocerySyncKey = useRef<string | null>(null);
   const displayItems = useMemo(() => {
     if (!firebaseEnabled) return items;
     const needs = groceryRunReady
@@ -423,6 +433,7 @@ export default function Home() {
           manual: need.manual,
           storeReason: need.storeReason,
           sources: need.sources,
+          section: need.section,
         };
       })
       .filter((need) => (need.quantity || 0) > 0);
@@ -541,19 +552,32 @@ export default function Home() {
     );
   }, [auth.session, firebaseEnabled, notify, week]);
   useEffect(() => {
-    if (!firebaseEnabled || !auth.session || !week[0] || !inventoryReady)
+    const weekStart = week[0]?.date;
+    const householdId = auth.session?.householdId;
+    if (!firebaseEnabled || !householdId || !weekStart || !inventoryReady)
       return;
-    syncGroceryRun(
-      calculatedNeeds,
-      week[0].date,
-      auth.session.householdId,
-    ).catch(() => undefined);
+    if (lastGrocerySyncKey.current === grocerySyncKey) return;
+
+    // Set this before the asynchronous transaction. Snapshot updates triggered
+    // by the write must not queue another identical transaction.
+    lastGrocerySyncKey.current = grocerySyncKey;
+    let cancelled = false;
+    syncGroceryRun(calculatedNeeds, weekStart, householdId).catch(() => {
+      // A temporary offline/quota failure remains safely retryable when the
+      // next meaningful plan or inventory edit occurs.
+      if (!cancelled && lastGrocerySyncKey.current === grocerySyncKey) {
+        lastGrocerySyncKey.current = null;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [
-    auth.session,
+    auth.session?.householdId,
     calculatedNeeds,
     firebaseEnabled,
+    grocerySyncKey,
     inventoryReady,
-    notify,
     week,
   ]);
   useEffect(() => {
@@ -5474,8 +5498,8 @@ function GroceriesView({
   const visible = items.filter((item) => item.store === store);
   const remaining = visible.filter((item) => !item.checked).length;
   const completed = visible.length - remaining;
-  const grocerySections = (["Produce", "Protein", "Dairy", "Pantry", "Frozen", "Other"] as const)
-    .map((name) => ({ name, items: visible.filter((item) => inventoryCategory(item) === name) }))
+  const grocerySections = (["Produce", "Protein", "Dairy", "Pantry", "Frozen", "Household", "Personal care & health", "Other"] as const)
+    .map((name) => ({ name, items: visible.filter((item) => (item.section || inventoryCategory(item)) === name) }))
     .filter((section) => section.items.length > 0);
   const trip = trips.find((candidate) => candidate.store === store);
   const [addOpen, setAddOpen] = useState(false);

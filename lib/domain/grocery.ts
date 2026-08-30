@@ -21,6 +21,7 @@ export type GroceryRunItem = GroceryNeed & {
   purchasedAt: string | null;
   manual?: boolean;
   note?: string;
+  section?: string;
 };
 
 const storeNames = {
