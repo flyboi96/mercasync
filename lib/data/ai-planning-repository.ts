@@ -2,7 +2,7 @@
 
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
-import { DEFAULT_FOOD_GOALS, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
+import { DEFAULT_FOOD_GOALS, type AiGenerationRequest, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 const household = (householdId?: string) => householdId || firebaseHouseholdId();
@@ -43,6 +43,18 @@ export async function requestAiRecipes(weekStart: string, season: string, househ
 }
 
 export const requestAiPlan = requestAiRecipes;
+
+export function subscribeToAiRequests(householdId: string | undefined, weekStart: string, onChange: (request: AiGenerationRequest | null) => void, onError: (error: Error) => void): Unsubscribe {
+  if (!usesFirebaseBackend()) { onChange(null); return () => undefined; }
+  const { db } = getFirebaseServices();
+  return onSnapshot(collection(db, 'households', household(householdId), 'aiGenerationRequests'), (snapshot) => {
+    const requests = snapshot.docs
+      .map((entry) => ({ id: entry.id, ...entry.data() }) as AiGenerationRequest)
+      .filter((request) => request.weekStart === weekStart)
+      .sort((a, b) => (b.requestedAt?.toMillis?.() || 0) - (a.requestedAt?.toMillis?.() || 0));
+    onChange(requests[0] || null);
+  }, onError);
+}
 
 export function subscribeToAiPlanningBrief(householdId: string | undefined, weekStart: string, onChange: (brief: AiPlanningBrief | null) => void, onError: (error: Error) => void): Unsubscribe {
   if (!usesFirebaseBackend()) { onChange(null); return () => undefined; }

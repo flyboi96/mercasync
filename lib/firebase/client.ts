@@ -2,7 +2,7 @@
 
 import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
-import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
+import { connectFirestoreEmulator, getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
 
 export type FirebaseServices = {
   auth: Auth;
@@ -10,6 +10,7 @@ export type FirebaseServices = {
 };
 
 let emulatorConnectionsReady = false;
+let firestore: Firestore | null = null;
 
 export function usesFirebaseBackend() {
   return process.env.NEXT_PUBLIC_DATA_BACKEND === 'firebase';
@@ -46,7 +47,14 @@ export function getFirebaseServices(): FirebaseServices {
 
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseOptions());
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  if (!firestore) {
+    try {
+      firestore = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    } catch {
+      firestore = getFirestore(app);
+    }
+  }
+  const db = firestore;
 
   if (
     process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATORS === 'true' &&

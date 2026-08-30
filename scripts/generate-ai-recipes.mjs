@@ -25,6 +25,7 @@ if (requestsSnap.empty && process.env.GENERATE_WITHOUT_REQUEST !== 'true') {
 }
 
 const newestRequest = requestsSnap.docs.sort((a, b) => (b.data().requestedAt?.toMillis?.() || 0) - (a.data().requestedAt?.toMillis?.() || 0))[0];
+const activeRequests = newestRequest ? [newestRequest] : [];
 const season = newestRequest?.data().season || ['winter', 'winter', 'spring', 'spring', 'spring', 'summer', 'summer', 'summer', 'fall', 'fall', 'fall', 'winter'][new Date().getUTCMonth()];
 const brief = {
   season,
@@ -40,6 +41,9 @@ const ingredientSchema = { type: 'object', additionalProperties: false, required
 const recipeSchema = { type: 'object', additionalProperties: false, required: ['name', 'mealType', 'description', 'cuisine', 'protein', 'method', 'effortMinutes', 'servings', 'lateNightSuitable', 'tags', 'ingredients', 'instructions', 'whyItFits', 'inventoryHighlights', 'seasonalHighlights'], properties: { name: { type: 'string' }, mealType: { type: 'string', enum: ['lunch', 'dinner'] }, description: { type: 'string' }, cuisine: { type: 'string' }, protein: { type: 'string' }, method: { type: 'string' }, effortMinutes: { type: 'integer', minimum: 5, maximum: 90 }, servings: { type: 'integer', minimum: 1, maximum: 8 }, lateNightSuitable: { type: 'boolean' }, tags: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 8 }, ingredients: { type: 'array', items: ingredientSchema, minItems: 2, maxItems: 20 }, instructions: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 12 }, whyItFits: { type: 'string' }, inventoryHighlights: { type: 'array', items: { type: 'string' }, maxItems: 5 }, seasonalHighlights: { type: 'array', items: { type: 'string' }, maxItems: 5 } } };
 const recommendationSchema = { type: 'object', additionalProperties: false, required: ['category', 'title', 'rationale', 'actionTab'], properties: { category: { type: 'string', enum: ['schedule', 'inventory', 'shopping', 'prep', 'nutrition'] }, title: { type: 'string' }, rationale: { type: 'string' }, actionTab: { type: 'string', enum: ['Calendar', 'Recipes', 'Inventory', 'Groceries'] } } };
 
+await Promise.all(activeRequests.map((request) => request.ref.update({ status: 'processing', startedAt: FieldValue.serverTimestamp() })));
+
+try {
 const response = await fetch('https://api.openai.com/v1/responses', {
   method: 'POST',
   headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
@@ -68,6 +72,11 @@ for (const proposal of generated) {
 }
 const weekStart = newestRequest?.data().weekStart || new Date().toISOString().slice(0, 10);
 batch.set(root.collection('aiPlanningBriefs').doc(weekStart), { weekStart, headline: generatedPlan.headline, summary: generatedPlan.summary, recommendations: generatedPlan.recommendations, model: result.model || process.env.OPENAI_MODEL || 'gpt-5-mini', createdAt: FieldValue.serverTimestamp() });
-for (const request of requestsSnap.docs) batch.update(request.ref, { status: 'completed', completedAt: FieldValue.serverTimestamp() });
+for (const request of activeRequests) batch.update(request.ref, { status: 'completed', completedAt: FieldValue.serverTimestamp() });
 await batch.commit();
 console.log(`Saved ${generated.length} MercaSync recipe proposals.`);
+} catch (error) {
+  const message = error instanceof Error ? error.message.slice(0, 300) : 'Unknown planning error';
+  await Promise.all(activeRequests.map((request) => request.ref.update({ status: 'failed', errorMessage: message, completedAt: FieldValue.serverTimestamp() })));
+  throw error;
+}

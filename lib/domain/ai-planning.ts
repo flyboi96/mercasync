@@ -46,6 +46,15 @@ export type AiPlanningBrief = {
   createdAt?: unknown;
 };
 
+export type AiGenerationRequest = {
+  id: string;
+  weekStart: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  requestedAt?: { toMillis?: () => number } | null;
+  completedAt?: unknown;
+  errorMessage?: string;
+};
+
 export type LocalPlanningSignal = {
   id: string;
   label: string;
