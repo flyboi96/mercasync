@@ -14,7 +14,7 @@ import { addInventoryItem, confirmInventoryItem, setInventoryQuantity, subscribe
 import { deleteRecurringFood, saveRecurringProfile, subscribeToRecurringProfiles } from '@/lib/data/recurring-profile-repository';
 import { addManualGroceryItem, moveGroceryItem, removeGroceryItem, setGroceryItemPurchased, subscribeToGroceryRun, syncGroceryRun, updateGroceryQuantity } from '@/lib/data/grocery-repository';
 import { saveShoppingTrip, subscribeToShoppingTrips, type ShoppingTrip } from '@/lib/data/shopping-trip-repository';
-import { approveAiProposal, rejectAiProposal, requestAiRecipes, saveFoodGoals, subscribeToAiProposals, subscribeToFoodGoals } from '@/lib/data/ai-planning-repository';
+import { approveAiProposal, rejectAiProposal, requestAiPlan, requestAiRecipes, saveFoodGoals, subscribeToAiPlanningBrief, subscribeToAiProposals, subscribeToFoodGoals } from '@/lib/data/ai-planning-repository';
 import { setMealCompletion, subscribeToMealCompletions } from '@/lib/data/meal-completion-repository';
 import { planningInputFingerprint, type SavedMealPlanDay } from '@/lib/domain/meal-plan';
 import { applyMealOverrides, type DinnerOverrideKind, type MealOverride } from '@/lib/domain/meal-override';
@@ -23,7 +23,7 @@ import { buildGroceryNeeds, formatGroceryQuantity, type GroceryRunItem } from '@
 import { correctedInventoryQuantity, effectiveInventoryConfidence, STARTER_INVENTORY, type InventoryCorrection, type InventoryItem } from '@/lib/domain/inventory';
 import { STARTER_RECIPES, type MealType, type Recipe } from '@/lib/domain/recipe';
 import { RECURRING_FOODS, recurringFoodOccurrences, type RecurringFood } from '@/lib/domain/recurring-consumption';
-import { DEFAULT_FOOD_GOALS, seasonForMonth, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
+import { buildLocalPlanningSignals, DEFAULT_FOOD_GOALS, seasonForMonth, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import { generateSmartPlan } from '@/lib/domain/smart-planner';
 import { applyStoreCadence, storeRunLabel } from '@/lib/domain/store-cadence';
 import {
@@ -47,7 +47,7 @@ import { useHouseholdSession } from '@/lib/auth/use-household-session';
 import { usesFirebaseBackend } from '@/lib/firebase/client';
 import { APP_VERSION } from '@/lib/version';
 
-type Grocery = { id: string; name: string; detail: string; store: 'King Soopers' | 'Costco'; checked: boolean; quantity?: number; unit?: string; manual?: boolean };
+type Grocery = { id: string; name: string; detail: string; store: 'King Soopers' | 'Costco'; checked: boolean; quantity?: number; unit?: string; manual?: boolean; storeReason?: string; sources?: string[] };
 const fallbackGroceries: Grocery[] = [
   { id: 'salmon', name: 'Wild salmon', detail: '1 lb · Miso bowls', store: 'King Soopers', checked: false },
   { id: 'spinach', name: 'Baby spinach', detail: '1 bag · Orzo + breakfast', store: 'King Soopers', checked: false },
@@ -80,6 +80,7 @@ export default function Home() {
   const [costcoThisWeek, setCostcoThisWeek] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [routinesOpen, setRoutinesOpen] = useState(false);
+  const [aiBrief, setAiBrief] = useState<AiPlanningBrief | null>(null);
   const auth = useHouseholdSession();
   const firebaseEnabled = usesFirebaseBackend();
   const scheduleWeek = useMemo(() => buildPlanningWeek(events, new Date(`${weekAnchor}T12:00:00`), 'America/Denver', dinnerTarget), [dinnerTarget, events, weekAnchor]);
@@ -111,12 +112,14 @@ export default function Home() {
       return {
         id: need.id,
         name: need.name,
-        detail: `${formatGroceryQuantity(need.quantity, need.unit)} · ${recipeSummary}${inventorySummary} · ${need.storeReason}`,
+        detail: `${formatGroceryQuantity(need.quantity, need.unit)} · ${recipeSummary}${inventorySummary}`,
         store: need.store,
         checked: need.checked,
         quantity: need.quantity,
         unit: need.unit,
         manual: need.manual,
+        storeReason: need.storeReason,
+        sources: need.sources,
       };
     }).filter((need) => (need.quantity || 0) > 0);
   }, [calculatedNeeds, firebaseEnabled, groceryRunReady, items, sharedGroceryItems]);
@@ -206,6 +209,10 @@ export default function Home() {
       () => notify('Could not load the weekly planning settings.'),
     );
   }, [auth.session, firebaseEnabled, notify]);
+  useEffect(() => {
+    if (!firebaseEnabled || !auth.session || !week[0]) return;
+    return subscribeToAiPlanningBrief(auth.session.householdId, week[0].date, setAiBrief, () => notify('Could not load the smart weekly briefing.'));
+  }, [auth.session, firebaseEnabled, notify, week]);
   const persistPlan = async () => {
     setSavingPlan(true);
     try {
@@ -275,7 +282,7 @@ export default function Home() {
       <header className="mobile-header"><div className="brand"><span className="brand-mark">M</span><span>MercaSync</span><small className="version-badge">v{APP_VERSION}</small></div><div className="mobile-people"><span className="avatar alex">A</span><span className="avatar nathalia">N</span></div></header>
       <header className="topbar"><div><p className="eyebrow">{formatLongDate()}</p><h1>{title}</h1><p>{active === 'Plan' ? 'Lunch and dinner, balanced around who’s home.' : 'Shared, current, and ready for both of you.'}</p></div>{active === 'Plan' && <button className={planIsSaved ? 'primary-button saved' : 'primary-button'} onClick={persistPlan} disabled={savingPlan || planIsSaved}><span>{planIsSaved ? '✓' : '↑'}</span> {savingPlan ? 'Saving…' : planIsSaved ? 'Plan saved' : savedPlan ? 'Save update' : 'Save plan'}</button>}</header>
       {(active === 'Plan' || active === 'Calendar' || active === 'Groceries') && <WeekNavigator week={week} onPrevious={() => moveWeek(-7)} onToday={() => setWeekAnchor(localDateForTimeZone(new Date()))} onNext={() => moveWeek(7)} />}
-      {active === 'Plan' && <PlanView items={displayItems} inventory={inventory} week={week} profiles={recurringProfiles} dinnerTarget={dinnerTarget} setDinnerTarget={changeDinnerTarget} startReset={() => setResetOpen(true)} editRoutines={() => setRoutinesOpen(true)} editMeal={(date) => setEditingMeal({ date, mealType: 'dinner' })} open={setActive} />}
+      {active === 'Plan' && <PlanView items={displayItems} inventory={inventory} week={week} profiles={recurringProfiles} dinnerTarget={dinnerTarget} setDinnerTarget={changeDinnerTarget} startReset={() => setResetOpen(true)} editRoutines={() => setRoutinesOpen(true)} editMeal={(date) => setEditingMeal({ date, mealType: 'dinner' })} open={setActive} aiBrief={aiBrief} householdId={auth.session?.householdId} notify={notify} />}
       {active === 'Calendar' && <CalendarView events={events} trips={displayedTrips} week={week} recipes={recipeItems} completions={mealCompletions} householdId={auth.session?.householdId} editMeal={(date, mealType) => setEditingMeal({ date, mealType })} onChanged={(changed) => setEvents((current) => [...current.filter((event) => event.id !== changed.id), changed].sort((a, b) => a.date.localeCompare(b.date)))} onDeleted={(id) => setEvents((current) => current.filter((event) => event.id !== id))} notify={notify} />}
       {active === 'Recipes' && <RecipesView recipes={recipeItems} inventory={inventory} week={week} householdId={auth.session?.householdId} onUpdated={(updated) => setRecipeItems((current) => current.map((recipe) => recipe.id === updated.id ? updated : recipe))} onCreated={(created) => setRecipeItems((current) => [...current.filter((recipe) => recipe.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name)))} onDeleted={(id) => setRecipeItems((current) => current.filter((recipe) => recipe.id !== id))} notify={notify} />}
       {active === 'Inventory' && <InventoryView inventory={inventory} householdId={auth.session?.householdId} notify={notify} />}
@@ -289,13 +296,17 @@ export default function Home() {
   </main>;
 }
 
-function PlanView({ items, inventory, week, profiles, dinnerTarget, setDinnerTarget, startReset, editRoutines, editMeal, open }: { items: Grocery[]; inventory: InventoryItem[]; week: PlanningDay[]; profiles: RecurringFood[]; dinnerTarget: number; setDinnerTarget: (target: number) => void; startReset: () => void; editRoutines: () => void; editMeal: (date: string) => void; open: (tab: string) => void }) {
+function PlanView({ items, inventory, week, profiles, dinnerTarget, setDinnerTarget, startReset, editRoutines, editMeal, open, aiBrief, householdId, notify }: { items: Grocery[]; inventory: InventoryItem[]; week: PlanningDay[]; profiles: RecurringFood[]; dinnerTarget: number; setDinnerTarget: (target: number) => void; startReset: () => void; editRoutines: () => void; editMeal: (date: string) => void; open: (tab: string) => void; aiBrief: AiPlanningBrief | null; householdId?: string; notify: (message: string) => void }) {
   const dinnerCount = week.filter((day) => day.meal.recipeId).length;
   const awayDays = week.filter((day) => !day.alex.isHome || !day.nathalia.isHome).length;
   const lateDays = week.filter((day) => day.alex.isLate || day.nathalia.isLate).length;
   const firstDinner = week.find((day) => day.meal.servings > 0) || week[0];
+  const [requesting, setRequesting] = useState(false);
+  const signals = buildLocalPlanningSignals({ lateDays, awayDays, uncertainInventory: inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length, groceryItems: items.filter((item) => !item.checked).length, costcoItems: items.filter((item) => item.store === 'Costco' && !item.checked).length });
+  const refreshBrief = async () => { setRequesting(true); try { await requestAiPlan(week[0].date, seasonForMonth(new Date(`${week[0].date}T12:00:00`).getMonth()), householdId); notify('Smart plan queued. It will appear here after secure automation runs.'); } catch { notify('Could not queue the smart plan.'); } finally { setRequesting(false); } };
   return <>
     <section className="reset-card"><div><p className="eyebrow">YOUR 5-MINUTE WEEKLY RITUAL</p><h2>Reset the kitchen</h2><p>Confirm only uncertain food, approve the best-fit meals, then shop from one finished list.</p></div><button onClick={startReset}>Start weekend reset <span>→</span></button></section>
+    <section className="smart-brief"><div className="smart-brief-heading"><span className="chef-orb">✦</span><div><p className="eyebrow">SMART WEEKLY BRIEF</p><h2>{aiBrief?.headline || 'The few things worth your attention'}</h2><p>{aiBrief?.summary || 'MercaSync handles the routine math and surfaces only useful exceptions.'}</p></div><button disabled={requesting} onClick={refreshBrief}>{requesting ? 'Queued…' : aiBrief ? 'Refresh' : 'Ask AI'}</button></div><div className="signal-grid">{(aiBrief?.recommendations || signals).map((signal, index) => { const actionTab = 'actionTab' in signal ? signal.actionTab : 'Plan'; const title = 'title' in signal ? signal.title : signal.label; const detail = 'rationale' in signal ? signal.rationale : signal.detail; return <button key={'id' in signal ? signal.id : `${signal.category}-${index}`} className={'tone' in signal ? `signal-card ${signal.tone}` : `signal-card ${signal.category}`} onClick={() => open(actionTab)}><small>{'category' in signal ? signal.category : index === 0 ? 'NEXT ACTION' : 'ALREADY ADJUSTED'}</small><strong>{title}</strong><span>{detail}</span><em>Review →</em></button>; })}</div><small className="smart-boundary">Quantities and store assignments use transparent MercaSync rules. AI adds context and suggestions; you stay in control.</small></section>
     <section className="dinner-target"><div><p className="eyebrow">THIS WEEK</p><strong>Dinners to cook</strong><small>The remaining nights become leftovers or dinner out.</small></div><div className="stepper"><button aria-label="Cook one fewer dinner" disabled={dinnerTarget === 0} onClick={() => setDinnerTarget(dinnerTarget - 1)}>−</button><output aria-live="polite">{dinnerTarget}</output><button aria-label="Cook one more dinner" disabled={dinnerTarget === 6} onClick={() => setDinnerTarget(dinnerTarget + 1)}>＋</button></div></section>
     <section className="today-card"><div><p className="eyebrow">NEXT DINNER · {firstDinner?.meal.servings || 0} SERVINGS</p><h2>{firstDinner?.meal.title}</h2><p>{firstDinner?.meal.effort} effort · {firstDinner?.meal.rationale}</p></div><button onClick={() => open('Calendar')}>View schedule</button></section>
     <section className="week-section"><div className="section-heading"><div><h2>{planningWeekLabel(week)}</h2><p>{dinnerCount} dinners to cook · {awayDays} away {awayDays === 1 ? 'day' : 'days'} · {lateDays} late {lateDays === 1 ? 'night' : 'nights'}</p></div><button className="text-button" onClick={() => open('Calendar')}>Calendar →</button></div><div className="week-grid">{week.map((day, index) => <article className={day.isToday || index === 0 ? 'day-card today' : 'day-card'} key={day.date}><div className="date"><span>{day.dayLabel}</span><strong>{day.dateLabel}</strong></div><div className="availability"><span className="mini-avatar alex">A</span><p>{day.alex.label}</p></div><div className="availability"><span className="mini-avatar nathalia">N</span><p>{day.nathalia.label}</p></div><button className={`meal ${day.meal.tone}`} title={day.meal.rationale} onClick={() => editMeal(day.date)}><small>{day.meal.label} · TAP TO CHANGE</small><strong>{day.meal.title}</strong><span className="meal-meta">{day.meal.servings} {day.meal.servings === 1 ? 'serving' : 'servings'} · {day.meal.effort}</span></button></article>)}</div></section>
@@ -562,6 +573,7 @@ function GroceriesView({ items, week, trips, householdId, store, setStore, toggl
   const trip = trips.find((candidate) => candidate.store === store);
   const [addOpen, setAddOpen] = useState(false); const [name, setName] = useState(''); const [quantity, setQuantity] = useState(1); const [unit, setUnit] = useState('each'); const [note, setNote] = useState('');
   const [editingItem, setEditingItem] = useState<Grocery | null>(null); const [editedQuantity, setEditedQuantity] = useState(1);
+  const [explainingId, setExplainingId] = useState<string | null>(null);
   const changeTripDate = async (date: string) => { try { await saveShoppingTrip(store, date, week[0].date, householdId); notify(`${store} trip moved. Both calendars updated.`); } catch { notify('Could not save that shopping date.'); } };
   const addItem = async () => { try { await addManualGroceryItem(week[0].date, { name, quantity, unit, store, note }, householdId); setName(''); setQuantity(1); setUnit('each'); setNote(''); setAddOpen(false); notify(`${name.trim()} added to ${store}.`); } catch { notify('Add an item name, quantity, and unit.'); } };
   const moveItem = async (item: Grocery) => { const destination = item.store === 'Costco' ? 'King Soopers' : 'Costco'; try { await moveGroceryItem(week[0].date, item.id, destination, householdId); notify(`${item.name} moved to ${destination}.`); } catch { notify('Could not move that item.'); } };
@@ -574,7 +586,7 @@ function GroceriesView({ items, week, trips, householdId, store, setStore, toggl
     <label className="shopping-date"><span><strong>Shopping date</strong><small>Shown on work and meal calendars</small></span><input type="date" value={trip?.date || ''} onChange={(event) => changeTripDate(event.target.value)} /></label>
     {store === 'Costco' && <button className={costcoThisWeek ? 'costco-toggle active' : 'costco-toggle'} onClick={() => setCostcoThisWeek(!costcoThisWeek)}><span>{costcoThisWeek ? '✓' : '○'}</span><span><strong>{costcoThisWeek ? 'Costco is happening this week' : 'Costco is next week'}</strong><small>{costcoThisWeek ? 'Tuesday–Thursday after work' : 'Tap if plans changed; immediate needs are at King Soopers'}</small></span></button>}
     <button className="add-grocery-button" onClick={() => setAddOpen(true)}>＋ Add something we need</button>
-    {visible.length > 0 ? <div className="shopping-list">{visible.map((item) => <article className={item.checked ? 'shopping-item-row checked' : 'shopping-item-row'} key={item.id}><button className="shopping-check" onClick={() => toggle(item.id)}><span className="big-check">✓</span><span><strong>{item.name}</strong><small>{item.detail}</small></span></button><div className="grocery-row-actions"><button onClick={() => editItem(item)}>Edit</button><button onClick={() => moveItem(item)}>Move</button></div></article>)}</div> : <div className="empty-groceries"><strong>Nothing needed here</strong><p>This week’s recipes are covered by the other store or estimated inventory.</p></div>}
+    {visible.length > 0 ? <div className="shopping-list">{visible.map((item) => <article className={item.checked ? 'shopping-item-row checked' : 'shopping-item-row'} key={item.id}><button className="shopping-check" onClick={() => toggle(item.id)}><span className="big-check">✓</span><span><strong>{item.name}</strong><small>{item.detail}</small></span></button><div className="grocery-row-actions"><button onClick={() => setExplainingId(explainingId === item.id ? null : item.id)}>Why here?</button><button onClick={() => editItem(item)}>Edit</button><button onClick={() => moveItem(item)}>Move</button></div>{explainingId === item.id && <div className="store-explanation"><span>◎</span><p><strong>{item.store === 'Costco' ? 'Bulk buy makes sense' : 'Weekly-size buy makes sense'}</strong>{item.storeReason || item.manual && item.detail || 'This is the current household store preference.'}</p></div>}</article>)}</div> : <div className="empty-groceries"><strong>Nothing needed here</strong><p>This week’s recipes are covered by the other store or estimated inventory.</p></div>}
     <div className="auto-note"><span className="pulse" /><p><strong>Calculated from this week</strong><br/>Schedule-aware recipe servings − compatible estimated inventory</p></div>
     {addOpen && <div className="sheet-backdrop" onClick={() => setAddOpen(false)}><section className="schedule-sheet grocery-adder" role="dialog" aria-modal="true" aria-label="Add grocery item" onClick={(event) => event.stopPropagation()}><div className="sheet-handle"/><div className="sheet-heading"><div><p className="eyebrow">{store.toUpperCase()}</p><h2>Add grocery item</h2></div><button aria-label="Close" onClick={() => setAddOpen(false)}>×</button></div><label>What do you need?<input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Greek yogurt" /></label><div className="creator-grid"><label>Quantity<input type="number" min="0.01" step="0.25" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} /></label><label>Unit<input value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="each, lb, oz" /></label></div><label>Note <small>optional</small><input value={note} onChange={(event) => setNote(event.target.value)} placeholder="For breakfast" /></label><button className="save-schedule" onClick={addItem}>Add to {store}</button></section></div>}
     {editingItem && <div className="sheet-backdrop" onClick={() => setEditingItem(null)}><section className="schedule-sheet grocery-adder" role="dialog" aria-modal="true" aria-label={`Edit ${editingItem.name}`} onClick={(event) => event.stopPropagation()}><div className="sheet-handle"/><div className="sheet-heading"><div><p className="eyebrow">THIS WEEK ONLY</p><h2>{editingItem.name}</h2></div><button aria-label="Close" onClick={() => setEditingItem(null)}>×</button></div><label>Quantity<input type="number" min="0.01" step="0.25" value={editedQuantity} onChange={(event) => setEditedQuantity(Number(event.target.value))} /><small>{editingItem.unit}</small></label><button className="save-schedule" onClick={saveQuantity}>Save quantity</button><button className="delete-recurring" onClick={removeItem}>Remove from this week</button><p className="sheet-note">Your correction is preserved when MercaSync refreshes the automatic list.</p></section></div>}

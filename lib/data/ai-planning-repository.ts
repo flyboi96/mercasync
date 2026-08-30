@@ -2,7 +2,7 @@
 
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { createRecipe } from './recipe-repository';
-import { DEFAULT_FOOD_GOALS, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
+import { DEFAULT_FOOD_GOALS, type AiPlanningBrief, type AiRecipeProposal, type HouseholdFoodGoals } from '@/lib/domain/ai-planning';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 const household = (householdId?: string) => householdId || firebaseHouseholdId();
@@ -39,7 +39,17 @@ export function subscribeToAiProposals(householdId: string | undefined, onChange
 export async function requestAiRecipes(weekStart: string, season: string, householdId?: string) {
   if (!usesFirebaseBackend()) return;
   const { auth, db } = getFirebaseServices(); if (!auth.currentUser) throw new Error('Sign in first.');
-  await addDoc(collection(db, 'households', household(householdId), 'aiGenerationRequests'), { weekStart, season, status: 'pending', requestedBy: auth.currentUser.uid, requestedAt: serverTimestamp() });
+  await addDoc(collection(db, 'households', household(householdId), 'aiGenerationRequests'), { weekStart, season, scope: 'full_plan', status: 'pending', requestedBy: auth.currentUser.uid, requestedAt: serverTimestamp() });
+}
+
+export const requestAiPlan = requestAiRecipes;
+
+export function subscribeToAiPlanningBrief(householdId: string | undefined, weekStart: string, onChange: (brief: AiPlanningBrief | null) => void, onError: (error: Error) => void): Unsubscribe {
+  if (!usesFirebaseBackend()) { onChange(null); return () => undefined; }
+  const { db } = getFirebaseServices();
+  return onSnapshot(doc(db, 'households', household(householdId), 'aiPlanningBriefs', weekStart), (snapshot) => {
+    onChange(snapshot.exists() ? snapshot.data() as AiPlanningBrief : null);
+  }, onError);
 }
 
 export async function approveAiProposal(proposal: AiRecipeProposal, householdId?: string) {

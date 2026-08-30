@@ -342,11 +342,17 @@ service cloud.firestore {
       match /aiGenerationRequests/{requestId} {
         allow read: if isHouseholdMember(householdId);
         allow create: if isHouseholdMember(householdId)
-          && request.resource.data.keys().hasOnly(['weekStart', 'season', 'status', 'requestedBy', 'requestedAt'])
+          && request.resource.data.keys().hasOnly(['weekStart', 'season', 'scope', 'status', 'requestedBy', 'requestedAt'])
+          && request.resource.data.scope == 'full_plan'
           && request.resource.data.status == 'pending'
           && request.resource.data.requestedBy == request.auth.uid
           && request.resource.data.requestedAt == request.time;
         allow update, delete: if false;
+      }
+
+      match /aiPlanningBriefs/{weekStart} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update, delete: if false;
       }
 
       match /aiRecipeProposals/{proposalId} {
