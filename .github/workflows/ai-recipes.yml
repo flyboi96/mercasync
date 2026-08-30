@@ -1,8 +1,6 @@
 name: Generate smart household plans
 
 on:
-  schedule:
-    - cron: '0 15 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -24,4 +22,4 @@ jobs:
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_HOUSEHOLD_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID }}
-          GENERATE_WITHOUT_REQUEST: ${{ github.event.schedule == '0 15 * * 0' }}
+          GENERATE_WITHOUT_REQUEST: 'false'
