@@ -45,7 +45,10 @@ export async function requestAiRecipes(weekStart: string, season: string, househ
     const dispatchUrl = process.env.NEXT_PUBLIC_AI_DISPATCH_URL;
     if (!dispatchUrl) throw new Error('Immediate AI dispatch is not configured.');
     const response = await fetch(dispatchUrl, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart }) });
-    if (!response.ok) throw new Error('Could not start the AI generation worker.');
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(detail?.error || 'Could not start the AI generation worker.');
+    }
   } catch (error) {
     await updateDoc(requestRef, { status: 'failed', errorMessage: error instanceof Error ? error.message : 'Could not start generation.', completedAt: serverTimestamp() });
     throw error;

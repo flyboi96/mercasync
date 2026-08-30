@@ -55,7 +55,14 @@ export default {
       },
       body: JSON.stringify({ ref: env.GITHUB_REF || 'main' }),
     });
-    if (!dispatchResponse.ok) return json({ error: 'The generation worker could not be started.' }, 502, origin);
+    if (!dispatchResponse.ok) {
+      const reason = dispatchResponse.status === 401 || dispatchResponse.status === 403
+        ? 'The secure GitHub connection needs to be renewed.'
+        : dispatchResponse.status === 404
+          ? 'The AI workflow could not be found on the main branch.'
+          : 'GitHub could not start generation. Try again shortly.';
+      return json({ error: reason }, 502, origin);
+    }
     return json({ ok: true, status: 'starting' }, 202, origin);
   },
 } satisfies ExportedHandler<Env>;

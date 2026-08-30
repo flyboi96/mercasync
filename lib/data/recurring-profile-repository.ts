@@ -1,7 +1,7 @@
 'use client';
 
-import { collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, setDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
-import { RECURRING_FOODS, type RecurringFood } from '@/lib/domain/recurring-consumption';
+import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, writeBatch, type Unsubscribe } from 'firebase/firestore';
+import { LEGACY_STARTER_FOOD_IDS, RECURRING_FOODS, type RecurringFood } from '@/lib/domain/recurring-consumption';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 function foodsCollection(householdId?: string) {
@@ -11,30 +11,16 @@ function foodsCollection(householdId?: string) {
 
 export function subscribeToRecurringProfiles(householdId: string | undefined, onChange: (foods: RecurringFood[]) => void, onError: (error: Error) => void): Unsubscribe {
   if (!usesFirebaseBackend()) { onChange(RECURRING_FOODS); return () => undefined; }
-  let bootstrapping = false;
   return onSnapshot(foodsCollection(householdId), async (snapshot) => {
-    if (snapshot.empty && !bootstrapping) {
-      bootstrapping = true;
-      try { await migrateLegacyFoods(householdId); }
-      catch (error) { onError(error instanceof Error ? error : new Error('Could not create recurring foods.')); }
+    const obsolete = snapshot.docs.filter((entry) => LEGACY_STARTER_FOOD_IDS.has(entry.id) && !entry.data().person && entry.data().timesPerWeek === 7);
+    if (obsolete.length) {
+      const { db } = getFirebaseServices(); const batch = writeBatch(db); obsolete.forEach((entry) => batch.delete(entry.ref));
+      await batch.commit();
       return;
     }
+    if (snapshot.empty) { onChange([]); return; }
     onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as RecurringFood).sort((a, b) => a.name.localeCompare(b.name)));
   }, onError);
-}
-
-async function migrateLegacyFoods(householdId?: string) {
-  const { auth, db } = getFirebaseServices();
-  if (!auth.currentUser) throw new Error('Sign in before creating recurring foods.');
-  const household = householdId || firebaseHouseholdId();
-  const legacy = await getDocs(collection(db, 'households', household, 'recurringProfiles'));
-  const foods: RecurringFood[] = legacy.empty ? RECURRING_FOODS : legacy.docs.flatMap((entry) => {
-    const profile = entry.data() as { enabled?: boolean; ingredients?: Array<{ itemId: string; name: string; quantity: number; unit: string; store: 'king_soopers' | 'costco' }> };
-    return (profile.ingredients || []).map((ingredient) => ({ id: `${entry.id}-${ingredient.itemId}`, name: ingredient.name, kind: 'item' as const, timesPerWeek: 7, enabled: profile.enabled !== false, ingredient }));
-  });
-  const batch = writeBatch(db);
-  foods.forEach(({ id, ...food }) => batch.set(doc(db, 'households', household, 'recurringFoods', id), { ...food, recipeId: food.recipeId || null, servings: food.servings || null, ingredient: food.ingredient || null, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() }));
-  await batch.commit();
 }
 
 export async function saveRecurringProfile(food: RecurringFood, householdId?: string) {

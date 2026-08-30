@@ -4,6 +4,11 @@ import { STARTER_RECIPES } from './recipe';
 import { buildPlanningWeek, type ScheduleException } from './schedule';
 
 const friday = new Date('2026-08-28T18:00:00Z');
+const breakfastFoods = [
+  { id: 'eggs', name: 'Eggs', kind: 'item' as const, timesPerWeek: 7, ingredient: { itemId: 'eggs', name: 'Eggs', quantity: 2, unit: 'each', store: 'costco' as const } },
+  { id: 'berries', name: 'Frozen berries', kind: 'item' as const, timesPerWeek: 7, ingredient: { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 0.5, unit: 'cup', store: 'costco' as const } },
+  { id: 'yogurt', name: 'Greek yogurt', kind: 'item' as const, timesPerWeek: 7, ingredient: { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 0.75, unit: 'cup', store: 'costco' as const } },
+];
 
 describe('deterministic grocery calculation', () => {
   it('aggregates recipe ingredients for planned lunch and dinner servings', () => {
@@ -16,16 +21,16 @@ describe('deterministic grocery calculation', () => {
 
   it('reduces quantities when a schedule exception leaves one person home', () => {
     const trip: ScheduleException = { id: 'trip', personId: 'nathalia', kind: 'work_trip', date: '2026-08-31', title: 'Work trip' };
-    const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES);
-    const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES);
+    const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [], friday, breakfastFoods);
+    const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES, [], friday, breakfastFoods);
     expect(adjusted.find((need) => need.itemId === 'salmon')?.quantity).toBe(0.5);
     expect(normal.find((need) => need.itemId === 'salmon')?.quantity).toBe(1);
   });
 
   it('keeps household recurring items independent from one person’s trip', () => {
     const trip: ScheduleException = { id: 'trip', personId: 'alex', kind: 'work_trip', date: '2026-08-31', title: 'Work trip' };
-    const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES);
-    const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES);
+    const normal = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [], friday, breakfastFoods);
+    const adjusted = buildGroceryNeeds(buildPlanningWeek([trip], friday), STARTER_RECIPES, [], friday, breakfastFoods);
     expect(normal.find((need) => need.itemId === 'eggs')?.quantity).toBe(14);
     expect(adjusted.find((need) => need.itemId === 'eggs')?.quantity).toBe(14);
   });
@@ -41,7 +46,7 @@ describe('deterministic grocery calculation', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
       { itemId: 'frozen-berries', name: 'Frozen berries', quantity: 6.5, unit: 'cup', confidence: 100, lastConfirmedAt: null },
       { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup', confidence: 100, lastConfirmedAt: null },
-    ], friday);
+    ], friday, breakfastFoods);
     expect(needs.some((need) => need.itemId === 'frozen-berries')).toBe(false);
     expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 9, inventoryUsed: 1 });
   });
@@ -56,7 +61,7 @@ describe('deterministic grocery calculation', () => {
   it('discounts uncertain inventory instead of treating every estimate as exact', () => {
     const needs = buildGroceryNeeds(buildPlanningWeek([], friday), STARTER_RECIPES, [
       { itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 2, unit: 'cup', confidence: 50, lastConfirmedAt: null },
-    ], friday);
+    ], friday, breakfastFoods);
     expect(needs.find((need) => need.itemId === 'greek-yogurt')).toMatchObject({ quantity: 9, inventoryUsed: 1 });
   });
 
