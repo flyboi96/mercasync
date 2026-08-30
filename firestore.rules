@@ -90,7 +90,7 @@ service cloud.firestore {
     }
 
     function validRecurringFood(data) {
-      return data.keys().hasOnly(['name', 'kind', 'timesPerWeek', 'enabled', 'recipeId', 'servings', 'ingredient', 'updatedBy', 'updatedAt'])
+      return data.keys().hasOnly(['name', 'kind', 'timesPerWeek', 'enabled', 'recipeId', 'servings', 'ingredient', 'person', 'mealType', 'weekdays', 'onlyWhenHome', 'updatedBy', 'updatedAt'])
         && data.name is string
         && data.name.size() > 0
         && data.name.size() <= 120
@@ -102,6 +102,10 @@ service cloud.firestore {
         && (data.recipeId == null || data.recipeId is string)
         && (data.servings == null || (data.servings is int && data.servings >= 1 && data.servings <= 12))
         && (data.ingredient == null || data.ingredient is map)
+        && (data.person == null || data.person == 'alex' || data.person == 'nathalia' || data.person == 'both')
+        && (data.mealType == null || data.mealType == 'breakfast' || data.mealType == 'lunch' || data.mealType == 'dinner' || data.mealType == 'snack' || data.mealType == 'grocery')
+        && (data.weekdays == null || data.weekdays is list)
+        && (data.onlyWhenHome == null || data.onlyWhenHome is bool)
         && data.updatedBy == request.auth.uid
         && data.updatedAt == request.time;
     }
@@ -378,6 +382,16 @@ service cloud.firestore {
       match /aiPlanningBriefs/{weekStart} {
         allow read: if isHouseholdMember(householdId);
         allow create, update, delete: if false;
+      }
+
+      match /aiWeeklyDrafts/{weekStart} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, delete: if false;
+        allow update: if isHouseholdMember(householdId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt'])
+          && (request.resource.data.status == 'applied' || request.resource.data.status == 'dismissed')
+          && request.resource.data.reviewedBy == request.auth.uid
+          && request.resource.data.reviewedAt == request.time;
       }
 
       match /aiRecipeProposals/{proposalId} {

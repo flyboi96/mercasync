@@ -96,6 +96,14 @@ Recipe selection is deterministic and explainable. The planner scores shared din
 
 The shared Costco-week setting represents the household's biweekly cadence without a paid scheduler. Store assignment is calculated after recipe, routine, and inventory deltas. Costco is selected only when projected demand uses enough of a known bulk package and the product is shelf-stable, keeps for at least two weeks, or freezes well. Shelf-stable goods may justify a lower two-week package share than refrigerated food. During off weeks, immediate requirements route to King Soopers so the weekly plan never depends on a skipped bulk run. Every grocery row explains its assignment.
 
+## Weekly planning orchestration
+
+The shared weekly reset is a resumable six-stage planning session: inventory, schedule, meal direction, shopping trips, complete draft, and approval. AI may propose all fourteen lunch and dinner slots, including new recipes, existing recipes, leftovers, eating out, and skipped meals. The draft is read-only until household approval. Approval first promotes any new recipe records and then saves one frozen meal-plan snapshot.
+
+AI owns culinary judgment, variety, schedule fit, and explanations. Pure domain code remains authoritative for servings, routine occurrence, inventory subtraction, unit conversion, grocery quantities, and store routing. This makes regeneration creative without allowing a model to silently change arithmetic or household inventory.
+
+Recurring foods may target Alex, Nathalia, or both and carry meal context. A person-specific home-only routine is excluded when that person is away. Grocery completion records the actual purchased quantity, and cooked-meal feedback updates the shared recipe preference used by both deterministic ranking and later AI context.
+
 ## Grocery and inventory reconciliation
 
 The weekly grocery run is a Firestore snapshot of deterministic recipe needs. Refreshing a run replaces pending calculations while preserving completed purchases. Checking an item uses one Firestore transaction to mark the shared item complete, increase the matching inventory estimate, raise confidence to 100%, and record an idempotent purchase transaction. Undo reverses that quantity and removes the ledger entry.

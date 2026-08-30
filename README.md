@@ -10,6 +10,11 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 
 ## Current development slice
 
+- Six-step Plan the Week flow: inventory, schedule, meal direction, shopping dates, complete AI draft, and approval
+- AI drafts all 14 lunch/dinner slots, mixing new and existing recipes with leftovers or eating out around the shared schedule
+- Approved AI drafts create their new recipes, freeze the meal plan, then hand deterministic recipe-minus-inventory math to groceries
+- Person-aware routines for Alex, Nathalia, or both, with meal context and automatic away-day suppression
+- In-store actual-quantity capture and lightweight post-cooking feedback for better inventory and future plans
 - Separate month-style work calendar and weekly meal calendar
 - Multi-day schedule exceptions, including a one-tap three-week trip range
 - Shared weekly dinner-count control that immediately adjusts the plan and groceries
