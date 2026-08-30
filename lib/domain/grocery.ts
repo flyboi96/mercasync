@@ -19,6 +19,7 @@ export type GroceryRunItem = GroceryNeed & {
   checked: boolean;
   purchasedQuantity: number;
   purchasedAt: string | null;
+  reconciledAt?: string | null;
   manual?: boolean;
   note?: string;
   section?: string;

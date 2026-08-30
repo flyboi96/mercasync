@@ -48,6 +48,7 @@ import {
   addManualGroceryItem,
   moveGroceryItem,
   removeGroceryItem,
+  reconcileGroceryStoreTrip,
   setGroceryItemPurchased,
   subscribeToGroceryRun,
   syncGroceryRun,
@@ -658,9 +659,7 @@ export default function Home() {
           auth.session?.householdId,
         );
         notify(
-          checked
-            ? `${current.name} purchased and added to inventory.`
-            : `${current.name} purchase undone.`,
+          checked ? `${current.name} checked. Inventory updates when you finish the trip.` : `${current.name} unchecked.`,
         );
       } catch {
         notify("Could not sync that purchase. Try again.");
@@ -690,6 +689,12 @@ export default function Home() {
       );
       notify("Could not save that change. Try again.");
     }
+  };
+  const finishGroceryStoreTrip = async (storeName: StoreName) => {
+    try {
+      const count = await reconcileGroceryStoreTrip(week[0].date, storeName, auth.session?.householdId);
+      notify(count ? `${count} ${storeName} purchases added to inventory.` : `No new checked ${storeName} items to add.`);
+    } catch { notify("Could not finish this shopping trip."); }
   };
   const changeDinnerTarget = async (target: number) => {
     const previous = dinnerTarget;
@@ -1013,6 +1018,7 @@ export default function Home() {
             preferences={storePreferences}
             notify={notify}
             openInventory={() => setActive("Inventory")}
+            finishTrip={finishGroceryStoreTrip}
           />
         )}
         {active === "Settings" && (
@@ -5488,6 +5494,7 @@ function GroceriesView({
   preferences,
   notify,
   openInventory,
+  finishTrip,
 }: {
   items: Grocery[];
   week: PlanningDay[];
@@ -5500,6 +5507,7 @@ function GroceriesView({
   preferences: StorePreference[];
   notify: (message: string) => void;
   openInventory: () => void;
+  finishTrip: (store: StoreName) => void;
 }) {
   const visible = items.filter((item) => item.store === store);
   const remaining = visible.filter((item) => !item.checked).length;
@@ -5677,6 +5685,9 @@ function GroceriesView({
           onChange={(event) => changeTripDate(event.target.value)}
         />
       </label>
+      <button className="finish-store-trip" onClick={() => finishTrip(store)}>
+        Finish {store} trip · update inventory
+      </button>
       <button className="add-grocery-button" onClick={() => setAddOpen(true)}>
         ＋ Add something we need
       </button>
