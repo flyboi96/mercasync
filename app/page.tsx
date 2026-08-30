@@ -3309,6 +3309,12 @@ function RecipesView({
               <button onClick={() => openRecipe(recipe)}>
                 Ingredients & steps
               </button>
+              <button
+                className="recipe-edit-shortcut"
+                onClick={() => setEditing(recipe)}
+              >
+                Edit recipe
+              </button>
             </div>
           </article>
         ))}
