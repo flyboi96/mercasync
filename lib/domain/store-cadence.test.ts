@@ -12,9 +12,19 @@ describe('store cadence', () => {
     expect(applyStoreCadence([costcoNeed], false)[0]).toMatchObject({ store: 'King Soopers', quantity: 12, storeReason: 'Needed before the next Costco run' });
   });
 
-  it('keeps a small purchase at King Soopers even during Costco week', () => {
+  it('keeps a differently measured yogurt need exact at King Soopers', () => {
     const yogurt = { ...costcoNeed, id: 'king:greek-yogurt:cup', itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 1, unit: 'cup', store: 'King Soopers' as const };
-    expect(applyStoreCadence([yogurt], true)[0]).toMatchObject({ store: 'King Soopers', storeReason: 'Weekly need is too small for the bulk package' });
+    expect(applyStoreCadence([yogurt], true)[0]).toMatchObject({ store: 'King Soopers', storeReason: 'Costco package uses oz; keeping this cup need exact and editable' });
+  });
+
+  it('keeps fresh produce at King Soopers even when Costco was preferred', () => {
+    const spinach = { ...costcoNeed, itemId: 'baby-spinach', name: 'Baby spinach', quantity: 1, unit: 'lb' };
+    expect(applyStoreCadence([spinach], true)[0]).toMatchObject({ store: 'King Soopers', storeReason: 'Fresh produce is sized for this week to reduce waste' });
+  });
+
+  it('does not compare incompatible recipe units with a bulk package', () => {
+    const yogurt = { ...costcoNeed, itemId: 'greek-yogurt', name: 'Greek yogurt', quantity: 2, unit: 'cup' };
+    expect(applyStoreCadence([yogurt], true)[0]).toMatchObject({ store: 'King Soopers' });
   });
 
   it('uses Costco for a shelf-stable package that can safely last beyond two weeks', () => {
