@@ -1,6 +1,6 @@
 {
   "name": "mercasync",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -18,7 +18,8 @@
     "db:generate": "drizzle-kit generate",
     "firebase:emulators": "firebase emulators:start --only auth,firestore --project demo-mercasync",
     "firebase:seed": "node scripts/seed-firebase-emulators.mjs",
-    "firebase:verify": "node scripts/verify-firebase-emulators.mjs"
+    "firebase:verify": "node scripts/verify-firebase-emulators.mjs",
+    "ai:recipes": "node scripts/generate-ai-recipes.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
@@ -40,6 +41,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "firebase-admin": "^14.3.0",
     "firebase-tools": "^15.28.2",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",

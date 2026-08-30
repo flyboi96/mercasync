@@ -125,6 +125,23 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function validFoodGoals(data) {
+      return data.keys().hasOnly(['proteinForward', 'vegetablesDaily', 'seasonalPriority', 'maxWeeknightMinutes', 'adventurousness', 'avoidIngredients', 'notes', 'updatedBy', 'updatedAt'])
+        && data.proteinForward is bool
+        && data.vegetablesDaily is bool
+        && data.seasonalPriority is bool
+        && data.maxWeeknightMinutes is int
+        && data.maxWeeknightMinutes >= 10
+        && data.maxWeeknightMinutes <= 90
+        && data.adventurousness is int
+        && data.adventurousness >= 1
+        && data.adventurousness <= 5
+        && data.avoidIngredients is string
+        && data.notes is string
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
     function validRecipe(data) {
       return data.keys().hasOnly([
           'name', 'mealType', 'description', 'cuisine', 'protein', 'method',
@@ -312,6 +329,34 @@ service cloud.firestore {
         allow read: if isHouseholdMember(householdId);
         allow create, update: if isHouseholdMember(householdId) && validShoppingTrip(request.resource.data);
         allow delete: if false;
+      }
+
+      match /aiSettings/{settingsId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, update: if isHouseholdMember(householdId)
+          && settingsId == 'foodGoals'
+          && validFoodGoals(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /aiGenerationRequests/{requestId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if isHouseholdMember(householdId)
+          && request.resource.data.keys().hasOnly(['weekStart', 'season', 'status', 'requestedBy', 'requestedAt'])
+          && request.resource.data.status == 'pending'
+          && request.resource.data.requestedBy == request.auth.uid
+          && request.resource.data.requestedAt == request.time;
+        allow update, delete: if false;
+      }
+
+      match /aiRecipeProposals/{proposalId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create, delete: if false;
+        allow update: if isHouseholdMember(householdId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt'])
+          && (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected')
+          && request.resource.data.reviewedBy == request.auth.uid
+          && request.resource.data.reviewedAt == request.time;
       }
 
       match /recipes/{recipeId} {

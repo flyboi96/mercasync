@@ -1,0 +1,28 @@
+name: Generate seasonal recipe proposals
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+    - cron: '0 15 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ai:recipes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_HOUSEHOLD_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID }}
+          GENERATE_WITHOUT_REQUEST: ${{ github.event.schedule == '0 15 * * 0' }}
