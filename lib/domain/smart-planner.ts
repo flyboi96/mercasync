@@ -29,7 +29,7 @@ export function generateSmartPlan(
   const used = new Set<string>();
 
   return schedule.map((day) => {
-    if (!day.meal.recipeId || day.meal.servings === 0) return day;
+    if (day.meal.servings === 0 || (!day.meal.recipeId && day.meal.title !== 'Dinner to plan')) return day;
     const ranked = dinners.map((recipe) => {
       let score = recipe.rating * 10 + (recipe.favorite ? 7 : 0) + pantryCoverage(recipe, inventory, now) * 14;
       if (day.alex.isLate || day.nathalia.isLate) score += recipe.lateNightSuitable ? 14 : -20;

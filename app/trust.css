@@ -1,6 +1,4 @@
 body.modal-open{overflow:hidden}
-.recipe-detail-backdrop{display:block;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:20px}
-.recipe-detail-backdrop>.recipe-detail{margin:auto;max-height:none;overflow:visible;touch-action:auto}
 :where(button,a,input,select,textarea):focus-visible{outline:3px solid #d96f56;outline-offset:3px}
 .meal-recipe-link,.meal-change-link,.calendar-change{border:0;background:transparent;text-align:left;color:inherit;padding:0;cursor:pointer}.meal-recipe-link{font:600 11px/1.25 Georgia,serif}.meal-recipe-link:disabled{cursor:default}.meal-change-link,.calendar-change{min-height:30px;color:#315f4b;text-decoration:underline;font-size:9px;font-weight:800}.calendar-change{margin-top:4px}
 .recipe-context{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin:15px 0}.recipe-context>span,.recipe-context>.stepper{min-height:62px;border-radius:12px;background:#f0f3ed;padding:10px;display:flex;flex-direction:column;justify-content:center}.recipe-context strong{font:600 19px Georgia,serif}.recipe-context small{color:#66736d;font-size:9px}.recipe-detail-grid li>span>small{display:block;color:#718079;font-size:8px;margin-top:2px}

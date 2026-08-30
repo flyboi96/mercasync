@@ -73,6 +73,7 @@ const baseDinners = [
   { recipeId: null, title: 'Dinner out', tone: 'ink', effort: 'None' as const },
   { recipeId: 'ginger-chicken-soup', title: 'Ginger chicken soup', tone: 'sage', effort: 'Standard' as const },
 ];
+const emptyDinners = Array.from({ length: 7 }, () => ({ recipeId: null, title: 'Dinner to plan', tone: 'sage', effort: 'Standard' as const }));
 
 const dinnerPriority = [0, 1, 3, 4, 6, 2];
 
@@ -87,6 +88,7 @@ const baseLunches = [
   { recipeId: 'greek-yogurt-crunch-bowl', title: 'Greek yogurt crunch bowl', effort: '5 min' as const },
   { recipeId: 'rotisserie-chicken-salad', title: 'Rotisserie chicken salad', effort: '10 min' as const },
 ];
+const emptyLunches = Array.from({ length: 7 }, () => ({ recipeId: null, title: 'Lunch to plan', effort: '5 min' as const }));
 
 function dateAtNoonUtc(date: string) {
   return new Date(`${date}T12:00:00Z`);
@@ -214,11 +216,14 @@ export function buildPlanningWeek(
   now = new Date(),
   timeZone = 'America/Denver',
   dinnerTarget = 5,
+  seedDemoMeals = true,
 ): PlanningDay[] {
   const today = localDateForTimeZone(now, timeZone);
   const start = planningWeekStart(today);
 
-  const availability = baseDinners.map((_, index) => {
+  const dinners = seedDemoMeals ? baseDinners : emptyDinners;
+  const lunches = seedDemoMeals ? baseLunches : emptyLunches;
+  const availability = dinners.map((_, index) => {
     const date = addLocalDays(start, index);
     return { date, alex: availabilityFor('alex', date, exceptions), nathalia: availabilityFor('nathalia', date, exceptions) };
   });
@@ -226,12 +231,12 @@ export function buildPlanningWeek(
     .filter((index) => availability[index].alex.isHome || availability[index].nathalia.isHome)
     .slice(0, Math.max(0, Math.min(6, dinnerTarget))));
 
-  return baseDinners.map((candidateDinner, index) => {
+  return dinners.map((candidateDinner, index) => {
     const date = addLocalDays(start, index);
     const { alex, nathalia } = availability[index];
-    const baseDinner = index === 5 ? candidateDinner : selectedDinners.has(index) ? candidateDinner : leftoversDinner;
+    const baseDinner = seedDemoMeals && index === 5 ? candidateDinner : selectedDinners.has(index) ? candidateDinner : leftoversDinner;
     const lunchDiners = people.filter((personId) => ({ alex, nathalia })[personId].isHome);
-    const baseLunch = baseLunches[index];
+    const baseLunch = lunches[index];
     const displayDate = dateAtNoonUtc(date);
 
     return {

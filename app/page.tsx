@@ -229,19 +229,20 @@ function defaultCostcoTripDate(weekStart: string) {
 }
 
 export default function Home() {
+  const firebaseEnabled = usesFirebaseBackend();
   const [active, setActive] = useState("Plan");
   const [items, setItems] = useState<Grocery[]>(fallbackGroceries);
   const [inventory, setInventory] =
-    useState<InventoryItem[]>(STARTER_INVENTORY);
+    useState<InventoryItem[]>(() => firebaseEnabled ? [] : STARTER_INVENTORY);
   const [inventoryReady, setInventoryReady] = useState(false);
   const [sharedGroceryItems, setSharedGroceryItems] = useState<
     GroceryRunItem[]
   >([]);
   const [mealCompletions, setMealCompletions] = useState<MealCompletion[]>([]);
   const [groceryRunReady, setGroceryRunReady] = useState(false);
-  const [recipeItems, setRecipeItems] = useState<Recipe[]>(STARTER_RECIPES);
+  const [recipeItems, setRecipeItems] = useState<Recipe[]>(() => firebaseEnabled ? [] : STARTER_RECIPES);
   const [recurringProfiles, setRecurringProfiles] =
-    useState<RecurringFood[]>(RECURRING_FOODS);
+    useState<RecurringFood[]>(() => firebaseEnabled ? [] : RECURRING_FOODS);
   const [events, setEvents] = useState<ScheduleException[]>([]);
   const [mealOverrides, setMealOverrides] = useState<MealOverride[]>([]);
   const [shoppingTrips, setShoppingTrips] = useState<ShoppingTrip[]>([]);
@@ -274,7 +275,6 @@ export default function Home() {
     useState<HouseholdFoodGoals>(DEFAULT_FOOD_GOALS);
   const connectivity = useConnectivity();
   const auth = useHouseholdSession();
-  const firebaseEnabled = usesFirebaseBackend();
   const scheduleWeek = useMemo(
     () =>
       buildPlanningWeek(
@@ -282,6 +282,7 @@ export default function Home() {
         new Date(`${weekAnchor}T12:00:00`),
         "America/Denver",
         dinnerTarget,
+        false,
       ),
     [dinnerTarget, events, weekAnchor],
   );
