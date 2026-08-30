@@ -271,36 +271,54 @@ export default function Home() {
     () => planningInputFingerprint(scheduleWeek, recipeItems, mealOverrides),
     [mealOverrides, recipeItems, scheduleWeek],
   );
-  const generatedWeek = useMemo(
+  const smartWeek = useMemo(
     () =>
-      applyMealOverrides(
-        generateSmartPlan(
-          scheduleWeek,
-          recipeItems,
-          inventory,
-          mealCompletions,
-        ),
-        mealOverrides,
+      generateSmartPlan(
+        scheduleWeek,
         recipeItems,
+        inventory,
+        mealCompletions,
       ),
-    [inventory, mealCompletions, mealOverrides, recipeItems, scheduleWeek],
+    [inventory, mealCompletions, recipeItems, scheduleWeek],
+  );
+  const generatedWeek = useMemo(
+    () => applyMealOverrides(smartWeek, mealOverrides, recipeItems),
+    [mealOverrides, recipeItems, smartWeek],
+  );
+  const planningRecipes = useMemo(
+    () =>
+      aiDraft?.status === "proposed"
+        ? [...recipeItems, ...(aiDraft.recipes || [])]
+        : recipeItems,
+    [aiDraft, recipeItems],
   );
   const proposedWeek = useMemo(
     () =>
       aiDraft?.status === "proposed"
-        ? applyWeeklyDraft(generatedWeek, aiDraft)
+        ? applyMealOverrides(
+            applyWeeklyDraft(smartWeek, aiDraft),
+            mealOverrides,
+            planningRecipes,
+          )
         : generatedWeek,
-    [aiDraft, generatedWeek],
+    [aiDraft, generatedWeek, mealOverrides, planningRecipes, smartWeek],
   );
   const week = useMemo(() => {
-    if (resetOpen || savedPlan?.sourceFingerprint !== planningFingerprint)
-      return resetOpen ? proposedWeek : generatedWeek;
+    if (
+      aiDraft?.status === "proposed" ||
+      resetOpen ||
+      savedPlan?.sourceFingerprint !== planningFingerprint
+    )
+      return aiDraft?.status === "proposed" || resetOpen
+        ? proposedWeek
+        : generatedWeek;
     const savedByDate = new Map(savedPlan.days.map((day) => [day.date, day]));
     return scheduleWeek.map((day) => ({
       ...day,
       ...(savedByDate.get(day.date) || {}),
     }));
   }, [
+    aiDraft,
     generatedWeek,
     planningFingerprint,
     proposedWeek,
@@ -326,23 +344,33 @@ export default function Home() {
         shoppingTrips.find((trip) => trip.id === fallback.id) || fallback,
     );
   }, [shoppingTrips, week]);
+  const costcoScheduledThisWeek = useMemo(() => {
+    const costcoDate = displayedTrips.find((trip) => trip.store === "Costco")?.date;
+    return Boolean(
+      costcoDate &&
+        week[0]?.date &&
+        week[6]?.date &&
+        costcoDate >= week[0].date &&
+        costcoDate <= week[6].date,
+    );
+  }, [displayedTrips, week]);
   const calculatedNeeds = useMemo(
     () =>
       applyStoreCadence(
         buildGroceryNeeds(
           week,
-          recipeItems,
+          planningRecipes,
           inventory,
           new Date(),
           recurringProfiles,
         ),
-        costcoThisWeek,
+        costcoScheduledThisWeek,
         storePreferences,
       ),
     [
-      costcoThisWeek,
+      costcoScheduledThisWeek,
       inventory,
-      recipeItems,
+      planningRecipes,
       recurringProfiles,
       storePreferences,
       week,
@@ -626,7 +654,7 @@ export default function Home() {
     const previous = dinnerTarget;
     setDinnerTarget(target);
     try {
-      await saveDinnerTarget(target, costcoThisWeek, auth.session?.householdId);
+      await saveDinnerTarget(target, costcoScheduledThisWeek, auth.session?.householdId);
       notify(
         `Planning ${target} ${target === 1 ? "dinner" : "dinners"} to cook.`,
       );
@@ -854,10 +882,12 @@ export default function Home() {
             aiDraft={aiDraft}
             approveWeek={finishReset}
             editRoutines={() => setRoutinesOpen(true)}
-            editMeal={(date) => setEditingMeal({ date, mealType: "dinner" })}
+            editMeal={(date, mealType = "dinner") =>
+              setEditingMeal({ date, mealType })
+            }
             viewRecipe={(id) =>
               setViewingRecipe(
-                recipeItems.find((recipe) => recipe.id === id) || null,
+                planningRecipes.find((recipe) => recipe.id === id) || null,
               )
             }
             open={setActive}
@@ -938,8 +968,7 @@ export default function Home() {
             store={store}
             setStore={setStore}
             toggle={toggleItem}
-            costcoThisWeek={costcoThisWeek}
-            setCostcoThisWeek={changeCostcoWeek}
+            costcoThisWeek={costcoScheduledThisWeek}
             preferences={storePreferences}
             notify={notify}
           />
@@ -949,7 +978,7 @@ export default function Home() {
             email={auth.session?.user.email || ""}
             displayName={auth.session?.member.displayName || ""}
             connectivity={connectivity}
-            costcoThisWeek={costcoThisWeek}
+            costcoThisWeek={costcoScheduledThisWeek}
             setCostcoThisWeek={changeCostcoWeek}
             goals={foodGoals}
             setGoals={setFoodGoals}
@@ -1014,7 +1043,7 @@ export default function Home() {
           events={events}
           week={week}
           trips={displayedTrips}
-          costcoThisWeek={costcoThisWeek}
+          costcoThisWeek={costcoScheduledThisWeek}
           setCostcoThisWeek={changeCostcoWeek}
           dinnerTarget={dinnerTarget}
           setDinnerTarget={changeDinnerTarget}
@@ -1035,7 +1064,7 @@ export default function Home() {
       {routinesOpen && (
         <RoutineEditor
           foods={recurringProfiles}
-          recipes={recipeItems}
+          recipes={planningRecipes}
           householdId={auth.session?.householdId}
           onClose={() => setRoutinesOpen(false)}
           onChanged={(food) =>
@@ -1095,12 +1124,12 @@ export default function Home() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function WeeklyCheck({ inventory, week, trips, dinnerTarget, setDinnerTarget, goals, setGoals, householdId, aiDraft, approveWeek, editRoutines, editMeal, viewRecipe, open }: any) {
-  const [draft, setDraft] = useState(goals); const [person, setPerson] = useState<'alex' | 'nathalia'>('alex'); const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift'); const [date, setDate] = useState(week[0]?.date || ''); const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState(goals); const [person, setPerson] = useState<'alex' | 'nathalia'>('alex'); const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift'); const [date, setDate] = useState(week[0]?.date || ''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const saveGoals = async () => { setBusy(true); try { await saveFoodGoals(draft, householdId); setGoals(draft); } finally { setBusy(false); } };
   const addSchedule = async () => { await createScheduleException({ personId: person, kind, date, title: kind.replace('_', ' ') }, householdId); };
-  const generate = async () => { setBusy(true); try { await requestAiPlan(week[0].date, seasonForMonth(new Date(`${week[0].date}T12:00:00`).getMonth()), householdId); } finally { setBusy(false); } };
+  const generate = async () => { setBusy(true); setError(''); try { await requestAiPlan(week[0].date, seasonForMonth(new Date(`${week[0].date}T12:00:00`).getMonth()), householdId); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not build the week.'); } finally { setBusy(false); } };
   const approve = async () => { setBusy(true); try { await approveWeek(); } finally { setBusy(false); } };
-  return <section className="weekly-check"><header><p className="eyebrow">WEEKEND RITUAL</p><h2>Weekly check</h2><p>Review your real week first, then adjust only what needs changing.</p></header><section className="week-at-glance"><h3>1. Week snapshot</h3><p>Tap a meal to open its recipe. Use Change to edit, move, or choose leftovers and eating out.</p><div className="simple-week">{week.map((day) => <article key={day.date}><span>{day.dayLabel}<b>{day.dateLabel}</b></span><button onClick={() => day.meal.recipeId && viewRecipe(day.meal.recipeId)}>{day.meal.title}</button><small>{day.meal.servings} servings</small><button className="change" onClick={() => editMeal(day.date)}>Change</button></article>)}</div></section><section><h3>2. Confirm what matters</h3><button onClick={() => open('Inventory')}>{inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length || 'No'} inventory checks →</button><button onClick={editRoutines}>Breakfast & lunch routines →</button></section><section><h3>3. Shape the week</h3><label>Dinners to cook<div className="stepper"><button onClick={() => setDinnerTarget(Math.max(0, dinnerTarget - 1))}>−</button><output>{dinnerTarget}</output><button onClick={() => setDinnerTarget(Math.min(6, dinnerTarget + 1))}>＋</button></div></label><label><input type="checkbox" checked={draft.proteinForward} onChange={(event) => setDraft({ ...draft, proteinForward: event.target.checked })}/> Protein-forward</label><label><input type="checkbox" checked={draft.vegetablesDaily} onChange={(event) => setDraft({ ...draft, vegetablesDaily: event.target.checked })}/> Vegetables daily</label><label>Flavor & goals<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })}/></label><button onClick={saveGoals} disabled={busy}>Save food direction</button></section><section><h3>4. Add schedule exception</h3><select value={person} onChange={(event) => setPerson(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select><select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}><option value="late_shift">Working late</option><option value="work_trip">Work trip</option><option value="away">Away</option><option value="holiday">Holiday</option><option value="day_off">Day off</option></select><input type="date" value={date} onChange={(event) => setDate(event.target.value)}/><button onClick={addSchedule}>Add schedule change</button></section><section><h3>5. Next shopping dates</h3><p>Choose the next date for each store. A date is the plan—there is no separate Costco toggle.</p>{trips.map((trip: ShoppingTrip) => <label key={trip.store}>{trip.store}<input type="date" value={trip.date} onChange={(event) => saveShoppingTrip(trip.store, event.target.value, week[0].date, householdId)}/></label>)}</section><button className="finish-reset" disabled={busy} onClick={generate}>{busy ? 'Building…' : 'Build our week'}</button>{aiDraft?.status === 'proposed' && <section><h3>6. Review your draft</h3>{aiDraft.recipes?.map((recipe) => <details key={recipe.id}><summary>{recipe.name} · {recipe.effortMinutes} min</summary><p>{recipe.description}</p><ul>{recipe.ingredients.map((item) => <li key={item.itemId}>{item.quantity} {item.unit} {item.name}</li>)}</ul></details>)}<div className="simple-week">{aiDraft.slots.filter((slot) => slot.mealType === 'dinner').map((slot) => <article key={slot.date}><span>{slot.date.slice(-2)}</span><button onClick={() => editMeal(slot.date)}>{slot.title}</button><small>{slot.servings} servings</small><button className="change" onClick={() => editMeal(slot.date)}>Move / change</button></article>)}</div><button className="finish-reset" disabled={busy} onClick={approve}>Approve week & build groceries →</button></section>}</section>;
+  return <section className="weekly-check"><header><p className="eyebrow">WEEKEND RITUAL</p><h2>Weekly check</h2><p>Confirm the few exceptions; MercaSync carries the rest.</p></header><section className="week-at-glance"><h3>1. Week snapshot</h3><p>Tap dinner to read the recipe. Change either meal to move it, use leftovers, or eat out.</p><div className="simple-week">{week.map((day) => <article key={day.date}><span>{day.dayLabel}<b>{day.dateLabel}</b></span><small>Lunch · {day.lunch.title}</small><button className="change" onClick={() => editMeal(day.date, 'lunch')}>Change lunch</button><button onClick={() => day.meal.recipeId && viewRecipe(day.meal.recipeId)}>{day.meal.title}</button><small>{day.meal.servings} servings</small><button className="change" onClick={() => editMeal(day.date)}>Change dinner</button></article>)}</div><button onClick={() => open('Calendar')}>Open meal calendar & mark meals done →</button></section><section><h3>2. Confirm what matters</h3><button onClick={() => open('Inventory')}>{inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length || 'No'} inventory checks →</button><button onClick={editRoutines}>Breakfast & weekday lunch routines →</button></section><section><h3>3. Shape the week</h3><label>Dinners to cook<div className="stepper"><button onClick={() => setDinnerTarget(Math.max(0, dinnerTarget - 1))}>−</button><output>{dinnerTarget}</output><button onClick={() => setDinnerTarget(Math.min(6, dinnerTarget + 1))}>＋</button></div></label><label><input type="checkbox" checked={draft.proteinForward} onChange={(event) => setDraft({ ...draft, proteinForward: event.target.checked })}/> Protein-forward</label><label><input type="checkbox" checked={draft.vegetablesDaily} onChange={(event) => setDraft({ ...draft, vegetablesDaily: event.target.checked })}/> Vegetables daily</label><label>Flavor & goals<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })}/></label><button onClick={saveGoals} disabled={busy}>Save food direction</button></section><section><h3>4. Add schedule exception</h3><select value={person} onChange={(event) => setPerson(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select><select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}><option value="late_shift">Working late</option><option value="work_trip">Work trip</option><option value="away">Away</option><option value="holiday">Holiday</option><option value="day_off">Day off</option></select><input type="date" value={date} onChange={(event) => setDate(event.target.value)}/><button onClick={addSchedule}>Add schedule change</button></section><section><h3>5. Next shopping dates</h3><p>Pick your next trip dates. The Costco date automatically tells the grocery list whether bulk buys belong there.</p>{trips.map((trip: ShoppingTrip) => <label key={trip.store}>{trip.store}<input type="date" value={trip.date} onChange={(event) => saveShoppingTrip(trip.store, event.target.value, week[0].date, householdId)}/></label>)}</section>{error && <p className="plan-alert">{error}</p>}<button className="finish-reset" disabled={busy} onClick={generate}>{busy ? 'Building…' : aiDraft?.status === 'proposed' ? 'Regenerate our week' : 'Build our week'}</button>{aiDraft?.status === 'proposed' && <section><h3>6. Review, adjust & approve</h3><p>Use the snapshot above to move or replace any meal before approval.</p>{aiDraft.recipes?.map((recipe) => <details key={recipe.id}><summary>{recipe.name} · {recipe.effortMinutes} min</summary><p>{recipe.description}</p><ul>{recipe.ingredients.map((item) => <li key={item.itemId}>{item.quantity} {item.unit} {item.name}</li>)}</ul></details>)}<button className="finish-reset" disabled={busy} onClick={approve}>Approve week & build groceries →</button></section>}</section>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -5329,7 +5358,6 @@ function GroceriesView({
   setStore,
   toggle,
   costcoThisWeek,
-  setCostcoThisWeek,
   preferences,
   notify,
 }: {
@@ -5341,7 +5369,6 @@ function GroceriesView({
   setStore: (store: StoreName) => void;
   toggle: (id: string) => void;
   costcoThisWeek: boolean;
-  setCostcoThisWeek: (next: boolean) => void;
   preferences: StorePreference[];
   notify: (message: string) => void;
 }) {
@@ -5494,7 +5521,9 @@ function GroceriesView({
       <div className="list-summary">
         <div>
           <p className="eyebrow">
-            {storeRunLabel(week, store, costcoThisWeek)}
+            {trip?.date
+              ? `PLANNED · ${new Date(`${trip.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}`
+              : storeRunLabel(week, store, costcoThisWeek)}
           </p>
           <h2>{store}</h2>
         </div>
@@ -5511,26 +5540,6 @@ function GroceriesView({
           onChange={(event) => changeTripDate(event.target.value)}
         />
       </label>
-      {store === "Costco" && (
-        <button
-          className={costcoThisWeek ? "costco-toggle active" : "costco-toggle"}
-          onClick={() => setCostcoThisWeek(!costcoThisWeek)}
-        >
-          <span>{costcoThisWeek ? "✓" : "○"}</span>
-          <span>
-            <strong>
-              {costcoThisWeek
-                ? "Costco is happening this week"
-                : "Costco is next week"}
-            </strong>
-            <small>
-              {costcoThisWeek
-                ? "Tuesday–Thursday after work"
-                : "Tap if plans changed; immediate needs are at King Soopers"}
-            </small>
-          </span>
-        </button>
-      )}
       <button className="add-grocery-button" onClick={() => setAddOpen(true)}>
         ＋ Add something we need
       </button>
