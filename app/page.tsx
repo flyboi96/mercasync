@@ -3976,8 +3976,8 @@ function RoutineEditor({
             ×
           </button>
         </div>
-        <p className="sheet-intro">Start with your normal breakfast and weekday lunch. Schedule exceptions automatically remove routines when someone is away.</p>
-        <div className="routine-templates"><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Shared breakfast"; next.person = "both"; next.mealType = "breakfast"; next.timesPerWeek = 7; next.weekdays = [0, 1, 2, 3, 4, 5, 6]; setSelectedId("new"); setDraft(next); }}>＋ Shared breakfast</button><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Weekday lunch"; next.person = "both"; next.mealType = "lunch"; next.timesPerWeek = 5; next.weekdays = [0, 1, 2, 3, 4]; setSelectedId("new"); setDraft(next); }}>＋ Weekday lunch</button></div>
+        <p className="sheet-intro">Set the shared breakfast once, then give Alex and Nathalia their own lunch routines. Schedule exceptions automatically remove a person’s routine when they are away.</p>
+        <div className="routine-templates"><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Shared breakfast"; next.person = "both"; next.mealType = "breakfast"; next.timesPerWeek = 7; next.weekdays = [0, 1, 2, 3, 4, 5, 6]; setSelectedId("new"); setDraft(next); }}>＋ Shared breakfast</button><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Alex weekday lunch"; next.person = "alex"; next.mealType = "lunch"; next.timesPerWeek = 5; next.weekdays = [0, 1, 2, 3, 4]; next.servings = 1; setSelectedId("new"); setDraft(next); }}>＋ Alex lunch</button><button onClick={() => { const next = blank(`recurring-${crypto.randomUUID()}`); next.name = "Nathalia weekday lunch"; next.person = "nathalia"; next.mealType = "lunch"; next.timesPerWeek = 5; next.weekdays = [0, 1, 2, 3, 4]; next.servings = 1; setSelectedId("new"); setDraft(next); }}>＋ Nathalia lunch</button></div>
         <div className="recurring-picker">
           {foods.map((food) => (
             <button
@@ -5437,6 +5437,9 @@ function GroceriesView({
   const visible = items.filter((item) => item.store === store);
   const remaining = visible.filter((item) => !item.checked).length;
   const completed = visible.length - remaining;
+  const grocerySections = (["Produce", "Protein", "Dairy", "Pantry", "Frozen", "Other"] as const)
+    .map((name) => ({ name, items: visible.filter((item) => inventoryCategory(item) === name) }))
+    .filter((section) => section.items.length > 0);
   const trip = trips.find((candidate) => candidate.store === store);
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState("");
@@ -5612,7 +5615,7 @@ function GroceriesView({
       </button>
       {visible.length > 0 ? (
         <div className="shopping-list">
-          {visible.map((item) => (
+          {grocerySections.map((section) => (<section className="grocery-section" key={section.name}><h3>{section.name}</h3>{section.items.map((item) => (
             <article
               className={
                 item.checked ? "shopping-item-row checked" : "shopping-item-row"
@@ -5661,7 +5664,7 @@ function GroceriesView({
                 </div>
               )}
             </article>
-          ))}
+          ))}</section>))}
         </div>
       ) : (
         <div className="empty-groceries">
