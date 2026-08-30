@@ -127,11 +127,12 @@ export async function moveGroceryItem(weekStart: string, itemId: string, store: 
   });
 }
 
-export async function updateGroceryQuantity(weekStart: string, itemId: string, quantity: number, householdId?: string) {
+export async function updateGroceryQuantity(weekStart: string, itemId: string, quantity: number, householdId?: string, unit?: string) {
   if (!usesFirebaseBackend() || !Number.isFinite(quantity) || quantity <= 0) return;
   const { auth, db } = getFirebaseServices(); if (!auth.currentUser) throw new Error('Sign in before editing groceries.');
   const runRef = runDocument(weekStart, householdId);
-  await runTransaction(db, async (transaction) => { const snapshot = await transaction.get(runRef); if (!snapshot.exists()) return; const items = (snapshot.data().items as GroceryRunItem[]).map((item) => item.id === itemId ? { ...item, quantity, manual: true, note: item.note || 'Quantity adjusted' } : item); transaction.update(runRef, { items, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() }); });
+  const cleanUnit = unit?.trim() ? normalizeUnit(unit) : undefined;
+  await runTransaction(db, async (transaction) => { const snapshot = await transaction.get(runRef); if (!snapshot.exists()) return; const items = (snapshot.data().items as GroceryRunItem[]).map((item) => item.id === itemId ? { ...item, quantity, ...(cleanUnit ? { unit: cleanUnit } : {}), manual: true, note: item.note || 'Quantity adjusted' } : item); transaction.update(runRef, { items, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() }); });
 }
 
 export async function removeGroceryItem(weekStart: string, itemId: string, householdId?: string) {

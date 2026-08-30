@@ -5523,6 +5523,7 @@ function GroceriesView({
   const [note, setNote] = useState("");
   const [editingItem, setEditingItem] = useState<Grocery | null>(null);
   const [editedQuantity, setEditedQuantity] = useState(1);
+  const [editedUnit, setEditedUnit] = useState("each");
   const [explainingId, setExplainingId] = useState<string | null>(null);
   const [movingItem, setMovingItem] = useState<Grocery | null>(null);
   const changeTripDate = async (date: string) => {
@@ -5586,6 +5587,7 @@ function GroceriesView({
   const editItem = (item: Grocery) => {
     setEditingItem(item);
     setEditedQuantity(item.quantity || 1);
+    setEditedUnit(item.unit || "each");
   };
   const saveQuantity = async () => {
     if (!editingItem) return;
@@ -5595,6 +5597,7 @@ function GroceriesView({
         editingItem.id,
         editedQuantity,
         householdId,
+        editedUnit,
       );
       setEditingItem(null);
       notify(`${editingItem.name} quantity updated.`);
@@ -5605,6 +5608,7 @@ function GroceriesView({
   const buyActualQuantity = async () => {
     if (!editingItem) return;
     try {
+      await updateGroceryQuantity(week[0].date, editingItem.id, editedQuantity, householdId, editedUnit);
       await setGroceryItemPurchased(
         week[0].date,
         editingItem.id,
@@ -5614,7 +5618,7 @@ function GroceriesView({
       );
       setEditingItem(null);
       notify(
-        `${editedQuantity} ${editingItem.unit} of ${editingItem.name} added to inventory.`,
+        `${editedQuantity} ${editedUnit} of ${editingItem.name} checked for this trip.`,
       );
     } catch {
       notify("Could not record that purchase.");
@@ -5849,10 +5853,9 @@ function GroceriesView({
                 ×
               </button>
             </div>
+            <div className="creator-grid">
             <label>
-              {editingItem.checked
-                ? "Recorded quantity"
-                : "Quantity in your cart"}
+              {editingItem.checked ? "Recorded quantity" : "Quantity in your cart"}
               <input
                 type="number"
                 min="0.01"
@@ -5862,8 +5865,12 @@ function GroceriesView({
                   setEditedQuantity(Number(event.target.value))
                 }
               />
-              <small>{editingItem.unit}</small>
             </label>
+            <label>
+              Unit
+              <input value={editedUnit} onChange={(event) => setEditedUnit(event.target.value)} placeholder="oz, lb, bag, each" />
+            </label>
+            </div>
             {!editingItem.checked && (
               <button className="save-schedule" onClick={buyActualQuantity}>
                 Bought this amount ✓
@@ -5876,8 +5883,7 @@ function GroceriesView({
               Didn’t get it — remove this week
             </button>
             <p className="sheet-note">
-              The amount actually purchased—not the suggestion—is added to
-              inventory.
+              The actual amount is used when you finish this store trip and update inventory.
             </p>
           </section>
         </div>
