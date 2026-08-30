@@ -8,7 +8,7 @@ interface Env {
   GITHUB_REF: string;
 }
 
-const json = (body: unknown, status = 200, origin = '') => new Response(JSON.stringify(body), {
+const json = (body: unknown, status = 200, origin = '') => new Response(status === 204 ? null : JSON.stringify(body), {
   status,
   headers: {
     'content-type': 'application/json',
@@ -19,7 +19,7 @@ const json = (body: unknown, status = 200, origin = '') => new Response(JSON.str
   },
 });
 
-function allowedValues(value: string) {
+function allowedValues(value = '') {
   return new Set(value.split(',').map((item) => item.trim()).filter(Boolean));
 }
 
