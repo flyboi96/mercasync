@@ -23,6 +23,7 @@ The app is designed mobile-first and can be installed on an iPhone from Safari u
 - Lunch and dinner overrides with recipe, leftovers, eating-out, skip, and serving controls
 - Full recipe editing and deletion from the shared recipe detail view
 - Per-week grocery quantity corrections and removal that survive automatic recalculation
+- ChatGPT Kitchen with shared nutrition goals, inventory/schedule/season-aware planning briefs, reviewable recipe proposals, and explicit approval before grocery impact
 - Real inventory creation for foods already at home
 - Tap any dinner in Plan or Calendar to cook another recipe, use leftovers, eat out, or skip it; servings and groceries update together
 - Add shared recipes with ingredients, steps, serving size, and an explicit Costco preference for durable bulk ingredients
@@ -82,3 +83,19 @@ Before the first deployment:
 Pushes to `main` then test, build, and deploy `dist-pages`. Pull requests run
 the same checks without publishing. Build locally with `npm run build:pages`
 and preview the exact static output with `npm run preview:pages`.
+
+## Secure ChatGPT recipe automation
+
+The PWA never receives an OpenAI key. Recipe requests are stored in Firestore,
+then `.github/workflows/ai-recipes.yml` processes them hourly and creates three
+reviewable proposals. Sunday’s run also generates seasonal proposals
+automatically. Add these repository settings before enabling the workflow:
+
+- Actions secret `OPENAI_API_KEY`
+- Actions secret `FIREBASE_SERVICE_ACCOUNT_JSON`
+- Actions variable `OPENAI_MODEL` (optional; defaults to `gpt-5-mini`)
+- Existing Actions variable `NEXT_PUBLIC_FIREBASE_HOUSEHOLD_ID`
+
+The Firebase service account belongs only in the encrypted GitHub secret. Never
+place it in `.env`, a `NEXT_PUBLIC_*` variable, or client source. A proposal does
+not affect inventory or groceries until Alex or Nathalia approves it.

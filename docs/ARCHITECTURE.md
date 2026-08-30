@@ -72,6 +72,9 @@ households/{householdId}/planningSettings/current
   updatedAt
 
 households/{householdId}/recurringFoods/{foodId}
+households/{householdId}/aiSettings/foodGoals
+households/{householdId}/aiGenerationRequests/{requestId}
+households/{householdId}/aiRecipeProposals/{proposalId}
   personId: alex | nathalia
   name
   enabled
@@ -104,6 +107,8 @@ Inventory quantity corrections are shared Firestore updates. The quick controls 
 Meal confirmation is stored separately from the generated plan. Marking a recipe-backed lunch or dinner cooked atomically subtracts its serving-scaled ingredients and records confirmed consumption. Marking it skipped preserves inventory; undoing cooked status restores the exact stored deductions.
 
 Recurring consumption is shared Firestore data independent of a specific household member. Each record represents either one grocery item or one shared recipe, with an editable weekly frequency. Grocery calculations multiply the item amount or recipe servings by that frequency, then subtract estimated inventory and apply store policy. Legacy person-specific profiles are read once for a non-destructive migration and no longer drive calculations afterward.
+
+AI recipe generation is asynchronous and approval-gated. The public client may edit constrained household goals, create pending requests, and review proposals. It cannot call OpenAI or create proposals. A GitHub Actions worker holds the OpenAI and Firebase Admin credentials, assembles a bounded brief from goals, inventory, recipe names, schedule exceptions, season, and store policy, requests schema-constrained output, and writes proposals. Only an authenticated household member may approve or reject; approval copies the proposal into the existing recipe collection.
 
 ## Static GitHub Pages deployment
 

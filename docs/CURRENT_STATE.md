@@ -107,6 +107,16 @@ Added after the original audit:
 - Full recipe contents can be edited after creation, and recipes can be deleted from their detail view.
 - Grocery quantities can be corrected for the selected week, and irrelevant items can be removed. Corrections become explicit manual choices so automatic recalculation preserves them.
 
+## Version 0.17 ChatGPT Kitchen update
+
+- The Recipes screen includes a household food compass for protein, vegetables, seasonal priority, weeknight effort, adventurousness, exclusions, and free-form goals.
+- A visible planning brief explains which season, reliable inventory, and schedule pressures will be sent for generation.
+- Either household member can queue a generation request. A secret-bearing GitHub Actions worker processes pending requests hourly; Sunday automation can generate proposals without a manual request.
+- The worker uses the OpenAI Responses API with a strict recipe JSON schema, then writes reviewable proposals rather than mutating plans or groceries.
+- Proposal cards explain fit, inventory reuse, and seasonal ingredients. Approving creates a normal shared recipe; rejecting records the feedback decision. Grocery impact begins only after approval and planning.
+
+The UI, Firestore rules, and worker are deployed independently from credentials. Until `OPENAI_API_KEY` and `FIREBASE_SERVICE_ACCOUNT_JSON` are configured as GitHub Actions secrets, requests remain safely pending and no OpenAI call occurs.
+
 ## Migration boundary
 
 The Sites/D1 deployment remains intact until Firebase reaches feature parity and data can be migrated. New product code should depend on domain types and repository interfaces rather than importing D1 or Firebase throughout the UI. During migration, D1 remains the legacy fallback and Firebase is enabled explicitly by configuration.
