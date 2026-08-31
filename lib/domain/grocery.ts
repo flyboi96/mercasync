@@ -18,6 +18,7 @@ export type GroceryNeed = {
 export type GroceryRunItem = GroceryNeed & {
   checked: boolean;
   purchasedQuantity: number;
+  purchasedUnit?: string | null;
   purchasedAt: string | null;
   reconciledAt?: string | null;
   manual?: boolean;

@@ -48,9 +48,9 @@ import {
 import {
   addManualGroceryItem,
   moveGroceryItem,
+  recordGroceryActualQuantity,
   removeGroceryItem,
   reconcileGroceryStoreTrip,
-  setGroceryItemPurchased,
   subscribeToGroceryRun,
   syncGroceryRun,
   updateGroceryQuantity,
@@ -165,6 +165,8 @@ type Grocery = {
   checked: boolean;
   quantity?: number;
   unit?: string;
+  actualQuantity?: number;
+  actualUnit?: string;
   manual?: boolean;
   storeReason?: string;
   sources?: string[];
@@ -443,6 +445,8 @@ export default function Home() {
             : need.checked,
           quantity: need.quantity,
           unit: need.unit,
+          actualQuantity: need.purchasedQuantity || undefined,
+          actualUnit: need.purchasedUnit || need.unit,
           manual: need.manual,
           storeReason: need.storeReason,
           sources: need.sources,
@@ -5654,17 +5658,17 @@ function GroceriesView({
   const buyActualQuantity = async () => {
     if (!editingItem) return;
     try {
-      await updateGroceryQuantity(week[0].date, editingItem.id, editedQuantity, householdId, editedUnit);
-      await setGroceryItemPurchased(
+      await recordGroceryActualQuantity(
         week[0].date,
         editingItem.id,
-        true,
-        householdId,
         editedQuantity,
+        editedUnit,
+        householdId,
       );
+      if (!editingItem.checked) toggle(editingItem.id);
       setEditingItem(null);
       notify(
-        `${editedQuantity} ${editedUnit} of ${editingItem.name} checked for this trip.`,
+        `Saved: got ${editedQuantity} ${editedUnit} of ${editingItem.name}.`,
       );
     } catch {
       notify("Could not record that purchase.");
@@ -5761,6 +5765,11 @@ function GroceriesView({
                 <span>
                   <strong>{item.name}</strong>
                   <small>{item.detail}</small>
+                  {item.actualQuantity != null && (
+                    <small className="actual-grocery-quantity">
+                      Got: {formatGroceryQuantity(item.actualQuantity, item.actualUnit || item.unit || "each")}
+                    </small>
+                  )}
                 </span>
               </button>
               <div className="grocery-row-actions">

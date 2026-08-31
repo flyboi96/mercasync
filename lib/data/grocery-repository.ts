@@ -77,6 +77,28 @@ export async function setGroceryItemPurchased(
   });
 }
 
+export async function recordGroceryActualQuantity(
+  weekStart: string,
+  itemId: string,
+  quantity: number,
+  unit: string,
+  householdId?: string,
+) {
+  if (!usesFirebaseBackend() || !Number.isFinite(quantity) || quantity <= 0) return;
+  const { auth, db } = getFirebaseServices();
+  if (!auth.currentUser) throw new Error('Sign in before recording a purchase.');
+  const runRef = runDocument(weekStart, householdId);
+  const purchasedUnit = normalizeUnit(unit);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(runRef);
+    if (!snapshot.exists()) return;
+    const items = (snapshot.data().items as GroceryRunItem[]).map((item) => item.id === itemId
+      ? { ...item, purchasedQuantity: quantity, purchasedUnit, manual: true, note: item.note || 'Actual quantity recorded' }
+      : item);
+    transaction.update(runRef, { items, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
+  });
+}
+
 export async function reconcileGroceryStoreTrip(
   weekStart: string,
   store: 'King Soopers' | 'Costco',
@@ -106,9 +128,11 @@ export async function reconcileGroceryStoreTrip(
       : items;
     const purchased = completedItems.filter((item) => item.store === store && item.checked && !item.reconciledAt);
     for (const item of purchased) {
-      const inventoryRef = doc(db, 'households', resolvedHouseholdId, 'inventory', inventoryDocumentId(item));
+      const purchasedUnit = item.purchasedUnit || item.unit;
+      const purchasedQuantity = item.purchasedQuantity || item.quantity;
+      const inventoryRef = doc(db, 'households', resolvedHouseholdId, 'inventory', inventoryDocumentId({ ...item, unit: purchasedUnit }));
       const inventory = await transaction.get(inventoryRef);
-      transaction.set(inventoryRef, { itemId: item.itemId, name: item.name, quantity: Math.round(((inventory.data()?.quantity || 0) + (item.purchasedQuantity || item.quantity)) * 100) / 100, unit: item.unit, confidence: 100, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+      transaction.set(inventoryRef, { itemId: item.itemId, name: item.name, quantity: Math.round(((inventory.data()?.quantity || 0) + purchasedQuantity) * 100) / 100, unit: purchasedUnit, confidence: 100, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
     }
     if (selectedIds || purchased.length) transaction.update(runRef, { items: completedItems.map((item) => purchased.some((candidate) => candidate.id === item.id) ? { ...item, reconciledAt: completedAt } : item), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
     return purchased.length;
