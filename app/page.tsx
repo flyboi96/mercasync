@@ -462,11 +462,6 @@ export default function Home() {
     () => displayItems.filter((item) => !item.checked).length,
     [displayItems],
   );
-  const groceryWeekStart = week[0]?.date;
-  useEffect(() => {
-    // A temporary shopping session belongs to one weekly list only.
-    setShoppingChecks({});
-  }, [groceryWeekStart]);
   const planIsSaved =
     !resetOpen && savedPlan?.sourceFingerprint === planningFingerprint;
   const notify = useCallback((message: string) => {
@@ -828,6 +823,7 @@ export default function Home() {
   };
   const moveWeek = (days: number) => {
     setWeekAnchor((current) => addLocalDays(current, days));
+    setShoppingChecks({});
     setSavedPlan(null);
     setGroceryRunReady(false);
     setSharedGroceryItems([]);
@@ -934,7 +930,10 @@ export default function Home() {
           <WeekNavigator
             week={week}
             onPrevious={() => moveWeek(-7)}
-            onToday={() => setWeekAnchor(localDateForTimeZone(new Date()))}
+            onToday={() => {
+              setWeekAnchor(localDateForTimeZone(new Date()));
+              setShoppingChecks({});
+            }}
             onNext={() => moveWeek(7)}
           />
         )}
@@ -1002,7 +1001,6 @@ export default function Home() {
         {active === "Recipes" && (
           <RecipesView
             recipes={recipeItems}
-            inventory={inventory}
             week={week}
             aiRequest={aiRequest}
             householdId={auth.session?.householdId}
@@ -2396,7 +2394,6 @@ function SignInView({ error }: { error: string }) {
 function SimpleRecipeLab({
   goals,
   proposals,
-  inventory,
   week,
   aiRequest,
   householdId,
@@ -2406,7 +2403,6 @@ function SimpleRecipeLab({
 }: {
   goals: HouseholdFoodGoals;
   proposals: AiRecipeProposal[];
-  inventory: InventoryItem[];
   week: PlanningDay[];
   aiRequest: AiGenerationRequest | null;
   householdId?: string;
@@ -3184,7 +3180,6 @@ function RecipeDetailSheet({
 
 function RecipesView({
   recipes,
-  inventory,
   week,
   aiRequest,
   householdId,
@@ -3194,7 +3189,6 @@ function RecipesView({
   notify,
 }: {
   recipes: Recipe[];
-  inventory: InventoryItem[];
   week: PlanningDay[];
   aiRequest: AiGenerationRequest | null;
   householdId?: string;
