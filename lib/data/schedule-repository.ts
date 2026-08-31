@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
   onSnapshot,
   serverTimestamp,
+  setDoc,
   updateDoc,
   type DocumentData,
   type QueryDocumentSnapshot,
@@ -100,21 +100,30 @@ export async function createScheduleException(
     const { auth, db } = getFirebaseServices();
     if (!auth.currentUser) throw new Error('Sign in before changing the schedule.');
     const resolvedHouseholdId = householdId || firebaseHouseholdId();
-    const reference = await addDoc(
-      collection(
-        db,
-        'households',
-        resolvedHouseholdId,
-        'scheduleExceptions',
-      ),
-      {
-        ...input,
-        endDate: input.endDate || null,
-        location: input.location || null,
-        createdBy: auth.currentUser.uid,
-        createdAt: serverTimestamp(),
-      },
+    // A schedule exception represents a fact, not a log entry. A stable id
+    // makes a second tap (or a slow network retry) safely overwrite the same
+    // exception instead of creating duplicates.
+    const exceptionId = [
+      input.personId,
+      input.kind,
+      input.date,
+      input.endDate || 'one-day',
+      input.title.trim().toLowerCase(),
+    ].map((part) => encodeURIComponent(part)).join('--');
+    const reference = doc(
+      db,
+      'households',
+      resolvedHouseholdId,
+      'scheduleExceptions',
+      exceptionId,
     );
+    await setDoc(reference, {
+      ...input,
+      endDate: input.endDate || null,
+      location: input.location || null,
+      createdBy: auth.currentUser.uid,
+      createdAt: serverTimestamp(),
+    }, { merge: true });
     return { id: reference.id, ...input };
   }
 

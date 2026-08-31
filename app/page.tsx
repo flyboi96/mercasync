@@ -966,6 +966,7 @@ export default function Home() {
               )
             }
             open={setActive}
+            notify={notify}
           />
           </>
         )}
@@ -1206,10 +1207,10 @@ function LunchRoutinesBanner({ profiles, onEdit }: { profiles: RecurringFood[]; 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function WeeklyCheck({ inventory, week, trips, dinnerTarget, setDinnerTarget, goals, setGoals, householdId, aiDraft, approveWeek, editRoutines, editMeal, viewRecipe, open }: any) {
-  const [draft, setDraft] = useState(goals); const [person, setPerson] = useState<'alex' | 'nathalia'>('alex'); const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift'); const [date, setDate] = useState(week[0]?.date || ''); const [endDate, setEndDate] = useState(week[0]?.date || ''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+function WeeklyCheck({ inventory, week, trips, dinnerTarget, setDinnerTarget, goals, setGoals, householdId, aiDraft, approveWeek, editRoutines, editMeal, viewRecipe, open, notify }: any) {
+  const [draft, setDraft] = useState(goals); const [person, setPerson] = useState<'alex' | 'nathalia'>('alex'); const [kind, setKind] = useState<ScheduleExceptionKind>('late_shift'); const [date, setDate] = useState(week[0]?.date || ''); const [endDate, setEndDate] = useState(week[0]?.date || ''); const [busy, setBusy] = useState(false); const [scheduleSaving, setScheduleSaving] = useState(false); const [error, setError] = useState('');
   const saveGoals = async () => { setBusy(true); try { await saveFoodGoals(draft, householdId); setGoals(draft); } finally { setBusy(false); } };
-  const addSchedule = async () => { if (endDate < date) { setError('The end date must be on or after the start date.'); return; } try { await createScheduleException({ personId: person, kind, date, endDate: endDate === date ? null : endDate, title: kind.replace('_', ' ') }, householdId); setError(''); } catch { setError('Could not save that schedule change.'); } };
+  const addSchedule = async () => { if (scheduleSaving) return; if (endDate < date) { setError('The end date must be on or after the start date.'); return; } setScheduleSaving(true); try { await createScheduleException({ personId: person, kind, date, endDate: endDate === date ? null : endDate, title: kind.replace('_', ' ') }, householdId); setError(''); notify(`Schedule saved: ${person === 'alex' ? 'Alex' : 'Nathalia'} · ${kind.replace('_', ' ')} · ${date}${endDate !== date ? ` through ${endDate}` : ''}`); } catch { setError('Could not save that schedule change.'); } finally { setScheduleSaving(false); } };
   const generate = async () => { setBusy(true); setError(''); try { await requestAiPlan(week[0].date, seasonForMonth(new Date(`${week[0].date}T12:00:00`).getMonth()), householdId); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not build the week.'); } finally { setBusy(false); } };
   const approve = async () => { setBusy(true); try { await approveWeek(); } finally { setBusy(false); } };
   return <section className="weekly-check"><header><p className="eyebrow">WEEKEND RITUAL</p><h2>Weekly check</h2><p>Confirm the few exceptions; MercaSync carries the rest.</p></header><section className="week-at-glance"><h3>1. Week snapshot</h3><p>Your availability is shown beside every day, so the meals, servings, and effort make sense at a glance.</p><div className="simple-week">{week.map((day) => <article className="week-snapshot-day" key={day.date}><span>{day.dayLabel}<b>{day.dateLabel}</b></span><div className="snapshot-meals"><div className="snapshot-availability"><small><i className="mini-avatar alex">A</i> {day.alex.label}</small><small><i className="mini-avatar nathalia">N</i> {day.nathalia.label}</small></div><small>Lunch · {day.lunch.title}</small><button onClick={() => day.meal.recipeId && viewRecipe(day.meal.recipeId)}>{day.meal.title}</button><small>{day.meal.servings} servings · {day.meal.effort}</small></div><div className="snapshot-actions"><button className="change" onClick={() => editMeal(day.date, 'lunch')}>Lunch</button><button className="change" onClick={() => editMeal(day.date)}>Dinner</button></div></article>)}</div><button onClick={() => open('Calendar')}>Open meal calendar & mark meals done →</button></section><section><h3>2. Confirm what matters</h3><button onClick={() => open('Inventory')}>{inventory.filter((item) => effectiveInventoryConfidence(item) < 75).length || 'No'} inventory checks →</button><button onClick={editRoutines}>Breakfast & weekday lunch routines →</button></section><section><h3>3. Shape the week</h3><label>Dinners to cook<div className="stepper"><button onClick={() => setDinnerTarget(Math.max(0, dinnerTarget - 1))}>−</button><output>{dinnerTarget}</output><button onClick={() => setDinnerTarget(Math.min(6, dinnerTarget + 1))}>＋</button></div></label><label><input type="checkbox" checked={draft.proteinForward} onChange={(event) => setDraft({ ...draft, proteinForward: event.target.checked })}/> Protein-forward</label><label><input type="checkbox" checked={draft.vegetablesDaily} onChange={(event) => setDraft({ ...draft, vegetablesDaily: event.target.checked })}/> Vegetables daily</label><label>Flavor & goals<textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="e.g. Mexican, bright Mediterranean, cozy pasta"/></label><label>Fastest weeknight dinner<input type="range" min="15" max="60" step="5" value={draft.maxWeeknightMinutes} onChange={(event) => setDraft({ ...draft, maxWeeknightMinutes: Number(event.target.value) })}/><small>{draft.maxWeeknightMinutes} minutes</small></label><label>How adventurous?<input type="range" min="1" max="5" value={draft.adventurousness} onChange={(event) => setDraft({ ...draft, adventurousness: Number(event.target.value) })}/><small>{draft.adventurousness}/5</small></label><label>Avoid ingredients<input value={draft.avoidIngredients} onChange={(event) => setDraft({ ...draft, avoidIngredients: event.target.value })} placeholder="Dislikes, allergies, hard no's"/></label><button onClick={saveGoals} disabled={busy}>Save food direction</button></section><section><h3>4. Add schedule exception</h3><select value={person} onChange={(event) => setPerson(event.target.value as 'alex' | 'nathalia')}><option value="alex">Alex</option><option value="nathalia">Nathalia</option></select><select value={kind} onChange={(event) => setKind(event.target.value as ScheduleExceptionKind)}><option value="late_shift">Working late</option><option value="work_trip">Work trip</option><option value="away">Away</option><option value="holiday">Holiday</option><option value="day_off">Day off</option></select><label>Starts<input type="date" value={date} onChange={(event) => { setDate(event.target.value); if (endDate < event.target.value) setEndDate(event.target.value); }}/></label><label>Through <small>Use the same date for one day</small><input type="date" min={date} value={endDate} onChange={(event) => setEndDate(event.target.value)}/></label><button onClick={addSchedule}>Add schedule change</button></section><section><h3>5. Next shopping dates</h3><p>Pick your next trip dates. The Costco date automatically tells the grocery list whether bulk buys belong there.</p>{trips.map((trip: ShoppingTrip) => <label key={trip.store}>{trip.store}<input type="date" value={trip.date} onChange={(event) => saveShoppingTrip(trip.store, event.target.value, week[0].date, householdId)}/></label>)}</section>{error && <p className="plan-alert">{error}</p>}<button className="finish-reset" disabled={busy} onClick={generate}>{busy ? 'Building…' : aiDraft?.status === 'proposed' ? 'Regenerate our week' : 'Build our week'}</button>{aiDraft?.status === 'proposed' && <section><h3>6. Review, adjust & approve</h3><p>Use the snapshot above to move or replace any meal before approval.</p>{aiDraft.recipes?.map((recipe) => <details key={recipe.id}><summary>{recipe.name} · {recipe.effortMinutes} min</summary><p>{recipe.description}</p><ul>{recipe.ingredients.map((item) => <li key={item.itemId}>{item.quantity} {item.unit} {item.name}</li>)}</ul></details>)}<button className="finish-reset" disabled={busy} onClick={approve}>Approve week & build groceries →</button></section>}</section>;
@@ -1740,6 +1741,7 @@ function CalendarView({
   const [note, setNote] = useState("");
   const [feedbackRecipe, setFeedbackRecipe] = useState<Recipe | null>(null);
   const [feedbackNote, setFeedbackNote] = useState("");
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const labels: Record<ScheduleExceptionKind, string> = {
     late_shift: "Late shift",
     work_trip: "Work trip",
@@ -1763,6 +1765,7 @@ function CalendarView({
     setOpen(true);
   };
   const save = async () => {
+    if (savingSchedule) return;
     if (endDate < date) {
       notify("The end date must be on or after the start date.");
       return;
@@ -1774,6 +1777,7 @@ function CalendarView({
       endDate: endDate === date ? null : endDate,
       title: note.trim() || labels[kind],
     };
+    setSavingSchedule(true);
     try {
       if (editing) {
         await updateScheduleException(editing.id, input, householdId);
@@ -1785,6 +1789,8 @@ function CalendarView({
       notify("Work calendar saved. The meal plan now reflects it.");
     } catch {
       notify("Could not save that schedule change.");
+    } finally {
+      setSavingSchedule(false);
     }
   };
   const moveMonth = (offset: number) => {
@@ -2188,8 +2194,8 @@ function CalendarView({
                 }
               />
             </label>
-            <button className="save-schedule" onClick={save}>
-              Save schedule change
+            <button className="save-schedule" onClick={save} disabled={savingSchedule}>
+              {savingSchedule ? "Saving schedule…" : "Save schedule change"}
             </button>
             <p className="sheet-note">
               One entry covers every day in the range and immediately updates
