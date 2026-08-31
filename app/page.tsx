@@ -915,6 +915,11 @@ export default function Home() {
           />
         )}
         {active === "Plan" && (
+          <>
+          <LunchRoutinesBanner
+            profiles={recurringProfiles}
+            onEdit={() => setRoutinesOpen(true)}
+          />
           <WeeklyCheck
             items={displayItems}
             inventory={inventory}
@@ -939,6 +944,7 @@ export default function Home() {
             }
             open={setActive}
           />
+          </>
         )}
         {active === "Calendar" && (
           <CalendarView
@@ -1169,6 +1175,12 @@ export default function Home() {
       )}
     </main>
   );
+}
+
+function LunchRoutinesBanner({ profiles, onEdit }: { profiles: RecurringFood[]; onEdit: () => void }) {
+  const lunchFor = (person: 'alex' | 'nathalia') => profiles.find((food) => food.person === person && food.mealType === 'lunch' && food.enabled !== false);
+  const alex = lunchFor('alex'); const nathalia = lunchFor('nathalia');
+  return <section className="lunch-routines-banner" aria-label="Individual weekday lunches"><div><p className="eyebrow">WEEKDAY LUNCHES</p><h2>Separate lunches, kept simple</h2></div><div className="lunch-routine-person"><strong>Alex</strong><span>{alex?.name || 'Lunch not set'}</span><button onClick={onEdit}>Edit Alex</button></div><div className="lunch-routine-person"><strong>Nathalia</strong><span>{nathalia?.name || 'Lunch not set'}</span><button onClick={onEdit}>Edit Nathalia</button></div></section>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
