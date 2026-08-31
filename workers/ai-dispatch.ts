@@ -22,6 +22,9 @@ export default {
     if (!ai.ok) return json({ error: `OpenAI returned ${ai.status}. Please retry.` }, 502, origin);
     const result = await ai.json() as { output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
     const text = result.output?.flatMap((item) => item.content || []).find((item) => item.type === 'output_text')?.text;
-    try { return json({ plan: JSON.parse(text || '') }, 200, origin); } catch { return json({ error: 'OpenAI returned an unreadable plan. Please retry.' }, 502, origin); }
+    try {
+      const payload = JSON.parse(text || '');
+      return json(formattingRecipe ? { recipe: payload.recipe } : { plan: payload }, 200, origin);
+    } catch { return json({ error: 'OpenAI returned an unreadable plan. Please retry.' }, 502, origin); }
   },
 } satisfies ExportedHandler<Env>;
