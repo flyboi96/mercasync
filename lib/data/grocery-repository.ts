@@ -77,20 +77,40 @@ export async function setGroceryItemPurchased(
   });
 }
 
-export async function reconcileGroceryStoreTrip(weekStart: string, store: 'King Soopers' | 'Costco', householdId?: string) {
+export async function reconcileGroceryStoreTrip(
+  weekStart: string,
+  store: 'King Soopers' | 'Costco',
+  householdId?: string,
+  checkedItemIds?: string[],
+) {
   if (!usesFirebaseBackend()) return 0;
   const { auth, db } = getFirebaseServices(); if (!auth.currentUser) throw new Error('Sign in before finishing a shopping trip.');
   const resolvedHouseholdId = householdId || firebaseHouseholdId(); const runRef = runDocument(weekStart, resolvedHouseholdId);
   return runTransaction(db, async (transaction) => {
     const runSnapshot = await transaction.get(runRef); if (!runSnapshot.exists()) return 0;
     const items = runSnapshot.data().items as GroceryRunItem[];
-    const purchased = items.filter((item) => item.store === store && item.checked && !item.reconciledAt);
+    const selectedIds = checkedItemIds ? new Set(checkedItemIds) : null;
+    const completedAt = new Date().toISOString();
+    const completedItems = selectedIds
+      ? items.map((item) => {
+          if (item.store !== store) return item;
+          const checked = selectedIds.has(item.id);
+          return {
+            ...item,
+            checked,
+            purchasedQuantity: checked ? (item.purchasedQuantity || item.quantity) : 0,
+            purchasedAt: checked ? (item.purchasedAt || completedAt) : null,
+            reconciledAt: checked ? item.reconciledAt || null : null,
+          };
+        })
+      : items;
+    const purchased = completedItems.filter((item) => item.store === store && item.checked && !item.reconciledAt);
     for (const item of purchased) {
       const inventoryRef = doc(db, 'households', resolvedHouseholdId, 'inventory', inventoryDocumentId(item));
       const inventory = await transaction.get(inventoryRef);
       transaction.set(inventoryRef, { itemId: item.itemId, name: item.name, quantity: Math.round(((inventory.data()?.quantity || 0) + (item.purchasedQuantity || item.quantity)) * 100) / 100, unit: item.unit, confidence: 100, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
     }
-    if (purchased.length) transaction.update(runRef, { items: items.map((item) => purchased.some((candidate) => candidate.id === item.id) ? { ...item, reconciledAt: new Date().toISOString() } : item), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+    if (selectedIds || purchased.length) transaction.update(runRef, { items: completedItems.map((item) => purchased.some((candidate) => candidate.id === item.id) ? { ...item, reconciledAt: completedAt } : item), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
     return purchased.length;
   });
 }

@@ -240,6 +240,9 @@ export default function Home() {
   const [sharedGroceryItems, setSharedGroceryItems] = useState<
     GroceryRunItem[]
   >([]);
+  // Checking an item is an in-store, temporary action.  Keep it on this
+  // device until the shopper deliberately finishes the store trip.
+  const [shoppingChecks, setShoppingChecks] = useState<Record<string, boolean>>({});
   const [mealCompletions, setMealCompletions] = useState<MealCompletion[]>([]);
   const [groceryRunReady, setGroceryRunReady] = useState(false);
   const [recipeItems, setRecipeItems] = useState<Recipe[]>(() => firebaseEnabled ? [] : STARTER_RECIPES);
@@ -430,7 +433,9 @@ export default function Home() {
           name: need.name,
           detail: `${formatGroceryQuantity(need.quantity, need.unit)} · ${recipeSummary}${inventorySummary}`,
           store: need.store,
-          checked: need.checked,
+          checked: Object.hasOwn(shoppingChecks, need.id)
+            ? shoppingChecks[need.id]
+            : need.checked,
           quantity: need.quantity,
           unit: need.unit,
           manual: need.manual,
@@ -445,12 +450,18 @@ export default function Home() {
     firebaseEnabled,
     groceryRunReady,
     items,
+    shoppingChecks,
     sharedGroceryItems,
   ]);
   const remaining = useMemo(
     () => displayItems.filter((item) => !item.checked).length,
     [displayItems],
   );
+  const groceryWeekStart = week[0]?.date;
+  useEffect(() => {
+    // A temporary shopping session belongs to one weekly list only.
+    setShoppingChecks({});
+  }, [groceryWeekStart]);
   const planIsSaved =
     !resetOpen && savedPlan?.sourceFingerprint === planningFingerprint;
   const notify = useCallback((message: string) => {
@@ -652,30 +663,7 @@ export default function Home() {
     if (!current) return;
     const checked = !current.checked;
     if (firebaseEnabled) {
-      // Firestore normally emits a local snapshot straight away, but do not make
-      // a shopper wait for that round trip to see whether their tap registered.
-      // The catch below restores the prior value if the shared write is rejected.
-      setSharedGroceryItems((all) =>
-        all.map((item) => (item.id === id ? { ...item, checked } : item)),
-      );
-      try {
-        await setGroceryItemPurchased(
-          week[0].date,
-          id,
-          checked,
-          auth.session?.householdId,
-        );
-        notify(
-          checked ? `${current.name} checked. Inventory updates when you finish the trip.` : `${current.name} unchecked.`,
-        );
-      } catch {
-        setSharedGroceryItems((all) =>
-          all.map((item) =>
-            item.id === id ? { ...item, checked: current.checked } : item,
-          ),
-        );
-        notify("Could not sync that purchase. Try again.");
-      }
+      setShoppingChecks((currentChecks) => ({ ...currentChecks, [id]: checked }));
       return;
     }
     setItems((all) =>
@@ -704,7 +692,22 @@ export default function Home() {
   };
   const finishGroceryStoreTrip = async (storeName: StoreName) => {
     try {
-      const count = await reconcileGroceryStoreTrip(week[0].date, storeName, auth.session?.householdId);
+      const checkedItemIds = displayItems
+        .filter((item) => item.store === storeName && item.checked)
+        .map((item) => item.id);
+      const count = await reconcileGroceryStoreTrip(
+        week[0].date,
+        storeName,
+        auth.session?.householdId,
+        checkedItemIds,
+      );
+      setShoppingChecks((currentChecks) => {
+        const next = { ...currentChecks };
+        displayItems
+          .filter((item) => item.store === storeName)
+          .forEach((item) => delete next[item.id]);
+        return next;
+      });
       notify(count ? `${count} ${storeName} purchases added to inventory.` : `No new checked ${storeName} items to add.`);
     } catch { notify("Could not finish this shopping trip."); }
   };
