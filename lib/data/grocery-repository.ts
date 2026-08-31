@@ -4,7 +4,7 @@ import { doc, onSnapshot, runTransaction, serverTimestamp, type Unsubscribe } fr
 import { dedupeGroceryRunItems, groceryNeedsFingerprint, mergeGroceryRunItems, type GroceryNeed, type GroceryRunItem } from '@/lib/domain/grocery';
 import { inventoryDocumentId } from '@/lib/domain/inventory';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
-import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
+import { canonicalItemId, normalizeUnit, standardizeItemQuantity } from '@/lib/domain/units';
 
 function runDocument(weekStart: string, householdId?: string) {
   const { db } = getFirebaseServices();
@@ -88,12 +88,13 @@ export async function recordGroceryActualQuantity(
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before recording a purchase.');
   const runRef = runDocument(weekStart, householdId);
-  const purchasedUnit = normalizeUnit(unit);
+  const normalizedPurchase = standardizeItemQuantity(itemId, quantity, unit);
+  const purchasedUnit = normalizedPurchase.unit;
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(runRef);
     if (!snapshot.exists()) return;
     const items = (snapshot.data().items as GroceryRunItem[]).map((item) => item.id === itemId
-      ? { ...item, purchasedQuantity: quantity, purchasedUnit, manual: true, note: item.note || 'Actual quantity recorded' }
+      ? { ...item, purchasedQuantity: normalizedPurchase.quantity, purchasedUnit, manual: true, note: item.note || 'Actual quantity recorded' }
       : item);
     transaction.update(runRef, { items, updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
   });
@@ -150,9 +151,10 @@ export async function addManualGroceryItem(weekStart: string, item: { name: stri
     const snapshot = await transaction.get(runRef);
     const existing = snapshot.exists() ? snapshot.data().items as GroceryRunItem[] : [];
     const itemId = canonicalItemId(cleanName);
-    const unit = normalizeUnit(item.unit);
+    const normalized = standardizeItemQuantity(itemId, item.quantity, item.unit);
+    const unit = normalized.unit;
     const id = `manual:${item.store}:${itemId}:${unit}`;
-    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, forceBuy: true, note: item.note?.trim() || '' };
+    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: normalized.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, forceBuy: true, note: item.note?.trim() || '' };
     const items = dedupeGroceryRunItems([...existing.filter((candidate) => candidate.id !== id), manual]);
     transaction.set(runRef, { weekStart, items, calculationFingerprint: snapshot.data()?.calculationFingerprint || 'manual', createdBy: snapshot.data()?.createdBy || auth.currentUser!.uid, createdAt: snapshot.data()?.createdAt || serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
   });

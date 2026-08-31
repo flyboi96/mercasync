@@ -7,6 +7,7 @@ const UNIT_ALIASES: Record<string, string> = {
   cup: 'cup', cups: 'cup',
   tablespoon: 'tbsp', tablespoons: 'tbsp', tbsp: 'tbsp',
   teaspoon: 'tsp', teaspoons: 'tsp', tsp: 'tsp',
+  'fluid ounce': 'fl oz', 'fluid ounces': 'fl oz', 'fl oz': 'fl oz', floz: 'fl oz',
   can: 'can', cans: 'can', bag: 'bag', bags: 'bag', package: 'package', packages: 'package', pack: 'package',
 };
 
@@ -32,7 +33,7 @@ export function unitDimension(unit: string): UnitDimension {
   const normalized = normalizeUnit(unit);
   if (normalized === 'each') return 'count';
   if (normalized === 'oz' || normalized === 'lb') return 'mass';
-  if (normalized === 'cup' || normalized === 'tbsp' || normalized === 'tsp') return 'volume';
+  if (normalized === 'cup' || normalized === 'tbsp' || normalized === 'tsp' || normalized === 'fl oz') return 'volume';
   if (normalized === 'can' || normalized === 'bag' || normalized === 'package') return 'package';
   return 'unknown';
 }
@@ -42,7 +43,7 @@ export function convertQuantity(quantity: number, fromUnit: string, toUnit: stri
   const to = normalizeUnit(toUnit);
   if (from === to) return quantity;
   if (unitDimension(from) !== unitDimension(to)) return null;
-  const base: Record<string, number> = { oz: 1, lb: 16, tsp: 1, tbsp: 3, cup: 48 };
+  const base: Record<string, number> = { oz: 1, lb: 16, tsp: 1, tbsp: 3, 'fl oz': 6, cup: 48 };
   if (!(from in base) || !(to in base)) return null;
   return Math.round(quantity * base[from] / base[to] * 100) / 100;
 }
@@ -53,9 +54,46 @@ const ITEM_UNIT_EQUIVALENTS: Record<string, { unit: string; baseQuantity: number
   'greek-yogurt': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 8 }],
   honey: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'tbsp', baseQuantity: 4 / 3 }],
   'quick-oats': [{ unit: 'bag', baseQuantity: 10 }, { unit: 'cup', baseQuantity: 1 }],
+  'chia-seeds': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'tbsp', baseQuantity: 2 }],
+  'pumpkin-seeds': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 4 }],
+  pecans: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 4 }],
+  'whey-protein': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'scoop', baseQuantity: 1 / 30 }],
+  'chicken-breast': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'lb', baseQuantity: 16 }],
+  'chicken-thighs': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'lb', baseQuantity: 16 }],
+  'ground-beef': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'lb', baseQuantity: 16 }],
+  salmon: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'lb', baseQuantity: 16 }],
   'olive-oil': [{ unit: 'each', baseQuantity: 32 }, { unit: 'tbsp', baseQuantity: 1 }],
   'soy-sauce': [{ unit: 'each', baseQuantity: 32 }, { unit: 'tbsp', baseQuantity: 1 }],
 };
+
+// One canonical unit per common household item. This keeps recipes, grocery
+// receipts, and inventory in the same measurement system. Unknown items keep
+// their entered unit rather than guessing an unsafe food-density conversion.
+const STANDARD_UNITS: Record<string, string> = {
+  'chicken-breast': 'oz', 'chicken-thighs': 'oz', 'ground-beef': 'oz', salmon: 'oz', 'deli-ham': 'oz',
+  'greek-yogurt': 'oz', milk: 'fl oz', 'havarti-cheese': 'oz', 'swiss-cheese': 'oz',
+  almonds: 'oz', pecans: 'oz', 'pumpkin-seeds': 'oz', 'chia-seeds': 'oz', 'flax-seeds': 'oz',
+  'quick-oats': 'cup', 'whey-protein': 'oz', honey: 'oz', 'peanut-butter': 'oz',
+  'olive-oil': 'fl oz', 'soy-sauce': 'fl oz', 'white-wine-vinegar': 'fl oz', 'lime-juice': 'fl oz',
+  'teriyaki-sauce': 'fl oz', 'oyster-sauce': 'fl oz', 'bulgogi-sauce': 'fl oz',
+  eggs: 'each', bananas: 'each', cucumber: 'each', zucchini: 'each', 'red-onion': 'each',
+  jalapenos: 'each', peach: 'each', 'green-pepper': 'each', 'cherry-tomatoes': 'oz',
+  'baby-spinach': 'oz', 'corn-tortillas': 'each', 'wheat-tortillas': 'each', 'sourdough-bread': 'oz',
+  'canned-corn': 'can', 'canned-beans': 'can', 'canned-chickpeas': 'can',
+  'penne-pasta': 'oz', quinoa: 'oz', 'basmati-rice': 'oz', 'legume-rice': 'oz',
+  '409-cleaner': 'each', 'kitchen-plug': 'each', shampoo: 'each',
+};
+
+export function standardUnitForItem(itemId: string, fallbackUnit: string) {
+  return STANDARD_UNITS[canonicalItemId(itemId)] || normalizeUnit(fallbackUnit);
+}
+
+export function standardizeItemQuantity(itemId: string, quantity: number, unit: string) {
+  const normalizedUnit = normalizeUnit(unit);
+  const standardUnit = standardUnitForItem(itemId, normalizedUnit);
+  const converted = convertItemQuantity(itemId, quantity, normalizedUnit, standardUnit);
+  return { quantity: converted == null ? quantity : converted, unit: converted == null ? normalizedUnit : standardUnit };
+}
 
 export function convertItemQuantity(itemId: string, quantity: number, fromUnit: string, toUnit: string): number | null {
   const standard = convertQuantity(quantity, fromUnit, toUnit);

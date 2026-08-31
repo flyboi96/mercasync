@@ -2,6 +2,7 @@
 
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type Unsubscribe } from 'firebase/firestore';
 import { STARTER_RECIPES, type Recipe } from '@/lib/domain/recipe';
+import { standardizeItemQuantity } from '@/lib/domain/units';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 function recipeCollection(householdId?: string) {
@@ -43,7 +44,7 @@ export async function createRecipe(recipe: Recipe, householdId?: string) {
   if (!recipe.name.trim() || !recipe.ingredients.length || !recipe.instructions.length) throw new Error('Recipe needs a name, ingredients, and steps.');
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before adding a recipe.');
-  const { id, ...data } = recipe;
+  const { id, ...data } = normalizeRecipeUnits(recipe);
   await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id), { ...data, createdBy: auth.currentUser.uid, createdAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
 }
 
@@ -51,8 +52,18 @@ export async function updateRecipe(recipe: Recipe, householdId?: string) {
   if (!usesFirebaseBackend()) return;
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before editing a recipe.');
-  const { id, ...data } = recipe;
+  const { id, ...data } = normalizeRecipeUnits(recipe);
   await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'recipes', id), { ...data, updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+}
+
+function normalizeRecipeUnits(recipe: Recipe): Recipe {
+  return {
+    ...recipe,
+    ingredients: recipe.ingredients.map((ingredient) => {
+      const normalized = standardizeItemQuantity(ingredient.itemId || ingredient.name, ingredient.quantity, ingredient.unit);
+      return { ...ingredient, quantity: normalized.quantity, unit: normalized.unit };
+    }),
+  };
 }
 
 export async function deleteRecipe(id: string, householdId?: string) {

@@ -2,7 +2,7 @@
 
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch, type Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { inventoryDocumentId, STARTER_INVENTORY, type InventoryItem } from '@/lib/domain/inventory';
-import { canonicalItemId, normalizeUnit } from '@/lib/domain/units';
+import { canonicalItemId, standardizeItemQuantity } from '@/lib/domain/units';
 import { firebaseHouseholdId, getFirebaseServices, usesFirebaseBackend } from '@/lib/firebase/client';
 
 function inventoryCollection(householdId?: string) {
@@ -66,13 +66,14 @@ export async function setInventoryQuantity(item: InventoryItem, quantity: number
   if (!Number.isFinite(quantity) || quantity < 0) throw new Error('Inventory quantity must be zero or greater.');
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before correcting inventory.');
-  const cleanUnit = normalizeUnit(unit || item.unit);
+  const normalized = standardizeItemQuantity(item.itemId, quantity, unit || item.unit);
+  const cleanUnit = normalized.unit;
   const oldRef = doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item));
   if (quantity === 0) {
     await deleteDoc(oldRef);
     return;
   }
-  const updated = { ...item, quantity: Math.round(quantity * 100) / 100, unit: cleanUnit };
+  const updated = { ...item, quantity: Math.round(normalized.quantity * 100) / 100, unit: cleanUnit };
   const nextRef = doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(updated));
   if (nextRef.path !== oldRef.path) {
     const batch = writeBatch(db);
@@ -82,7 +83,7 @@ export async function setInventoryQuantity(item: InventoryItem, quantity: number
     return;
   }
   await updateDoc(oldRef, {
-    quantity: Math.round(quantity * 100) / 100,
+    quantity: Math.round(normalized.quantity * 100) / 100,
     unit: cleanUnit,
     confidence: 100,
     lastConfirmedAt: serverTimestamp(),
@@ -94,9 +95,11 @@ export async function setInventoryQuantity(item: InventoryItem, quantity: number
 export async function addInventoryItem(name: string, quantity: number, unit: string, householdId?: string) {
   if (!usesFirebaseBackend()) return;
   const cleanName = name.trim();
-  const cleanUnit = normalizeUnit(unit);
+  const itemId = canonicalItemId(cleanName);
+  const normalized = standardizeItemQuantity(itemId, quantity, unit);
+  const cleanUnit = normalized.unit;
   if (!cleanName || cleanName.length > 120 || !cleanUnit || !Number.isFinite(quantity) || quantity < 0) throw new Error('Enter a valid item, quantity, and unit.');
-  const item: InventoryItem = { itemId: canonicalItemId(cleanName), name: cleanName, quantity: Math.round(quantity * 100) / 100, unit: cleanUnit, confidence: 100, lastConfirmedAt: null };
+  const item: InventoryItem = { itemId, name: cleanName, quantity: Math.round(normalized.quantity * 100) / 100, unit: cleanUnit, confidence: 100, lastConfirmedAt: null };
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before adding inventory.');
   await setDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), { ...item, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
