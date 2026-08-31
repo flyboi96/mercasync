@@ -1,4 +1,4 @@
-export type MealType = 'lunch' | 'dinner';
+export type MealType = 'lunch' | 'dinner' | 'snack';
 export type RecipeColor = 'sage' | 'sun' | 'clay' | 'blue' | 'berry';
 
 export type RecipeIngredient = {

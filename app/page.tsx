@@ -3254,7 +3254,7 @@ function RecipesView({
           role="tablist"
           aria-label="Recipe meal type"
         >
-          {(["all", "dinner", "lunch"] as const).map((value) => (
+          {(["all", "dinner", "lunch", "snack"] as const).map((value) => (
             <button
               key={value}
               className={mealType === value ? "active" : ""}
@@ -3266,7 +3266,7 @@ function RecipesView({
                 ? "All"
                 : value === "dinner"
                   ? "Dinners"
-                  : "Fast lunches"}
+                  : value === "lunch" ? "Fast lunches" : "Snacks"}
             </button>
           ))}
         </div>
@@ -3298,7 +3298,7 @@ function RecipesView({
               </button>
               <span>
                 {recipe.mealType === "lunch"
-                  ? "FAST LUNCH"
+                  ? "FAST LUNCH" : recipe.mealType === "snack" ? "SNACK"
                   : recipe.lateNightSuitable
                     ? "LATE-NIGHT READY"
                     : recipe.method.toUpperCase()}
@@ -3655,6 +3655,7 @@ function RecipeCreator({
             >
               <option value="dinner">Dinner</option>
               <option value="lunch">Fast lunch</option>
+              <option value="snack">Snack</option>
             </select>
           </label>
           <label>
