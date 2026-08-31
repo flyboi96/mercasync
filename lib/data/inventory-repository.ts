@@ -61,17 +61,29 @@ export async function confirmInventoryItems(items: InventoryItem[], householdId?
   await batch.commit();
 }
 
-export async function setInventoryQuantity(item: InventoryItem, quantity: number, householdId?: string) {
+export async function setInventoryQuantity(item: InventoryItem, quantity: number, householdId?: string, unit?: string) {
   if (!usesFirebaseBackend()) return;
   if (!Number.isFinite(quantity) || quantity < 0) throw new Error('Inventory quantity must be zero or greater.');
   const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) throw new Error('Sign in before correcting inventory.');
+  const cleanUnit = normalizeUnit(unit || item.unit);
+  const oldRef = doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item));
   if (quantity === 0) {
-    await deleteDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)));
+    await deleteDoc(oldRef);
     return;
   }
-  await updateDoc(doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(item)), {
+  const updated = { ...item, quantity: Math.round(quantity * 100) / 100, unit: cleanUnit };
+  const nextRef = doc(db, 'households', householdId || firebaseHouseholdId(), 'inventory', inventoryDocumentId(updated));
+  if (nextRef.path !== oldRef.path) {
+    const batch = writeBatch(db);
+    batch.set(nextRef, { ...updated, confidence: 100, lastConfirmedAt: serverTimestamp(), updatedBy: auth.currentUser.uid, updatedAt: serverTimestamp() });
+    batch.delete(oldRef);
+    await batch.commit();
+    return;
+  }
+  await updateDoc(oldRef, {
     quantity: Math.round(quantity * 100) / 100,
+    unit: cleanUnit,
     confidence: 100,
     lastConfirmedAt: serverTimestamp(),
     updatedBy: auth.currentUser.uid,

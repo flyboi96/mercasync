@@ -5122,6 +5122,7 @@ function InventoryView({
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [openedAt] = useState(() => Date.now());
   const [quantity, setQuantity] = useState("");
+  const [editingUnit, setEditingUnit] = useState("each");
   const [newName, setNewName] = useState("");
   const [newQuantity, setNewQuantity] = useState("");
   const [newUnit, setNewUnit] = useState("each");
@@ -5138,6 +5139,7 @@ function InventoryView({
   const openCorrection = (item: InventoryItem) => {
     setEditing(item);
     setQuantity(String(item.quantity));
+    setEditingUnit(item.unit);
   };
   const openUse = (item: InventoryItem) => {
     setUsingItem(item);
@@ -5188,7 +5190,7 @@ function InventoryView({
       return;
     }
     try {
-      await setInventoryQuantity(editing, next, householdId);
+      await setInventoryQuantity(editing, next, householdId, editingUnit);
       notify(
         next === 0
           ? `${editing.name} removed from inventory.`
@@ -5397,7 +5399,7 @@ function InventoryView({
                 </button>
               ))}
             </div>
-            <label>
+            <div className="creator-grid"><label>
               Estimated quantity
               <input
                 autoFocus
@@ -5408,8 +5410,7 @@ function InventoryView({
                 value={quantity}
                 onChange={(event) => setQuantity(event.target.value)}
               />
-              <small>{editing.unit}</small>
-            </label>
+            </label><label>Unit<input value={editingUnit} onChange={(event) => setEditingUnit(event.target.value)} placeholder="oz, lb, bag, each" /></label></div>
             <button className="save-schedule" onClick={saveCorrection}>
               Save correction
             </button>
