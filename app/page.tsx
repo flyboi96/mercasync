@@ -652,6 +652,12 @@ export default function Home() {
     if (!current) return;
     const checked = !current.checked;
     if (firebaseEnabled) {
+      // Firestore normally emits a local snapshot straight away, but do not make
+      // a shopper wait for that round trip to see whether their tap registered.
+      // The catch below restores the prior value if the shared write is rejected.
+      setSharedGroceryItems((all) =>
+        all.map((item) => (item.id === id ? { ...item, checked } : item)),
+      );
       try {
         await setGroceryItemPurchased(
           week[0].date,
@@ -663,6 +669,11 @@ export default function Home() {
           checked ? `${current.name} checked. Inventory updates when you finish the trip.` : `${current.name} unchecked.`,
         );
       } catch {
+        setSharedGroceryItems((all) =>
+          all.map((item) =>
+            item.id === id ? { ...item, checked: current.checked } : item,
+          ),
+        );
         notify("Could not sync that purchase. Try again.");
       }
       return;
@@ -5727,7 +5738,10 @@ function GroceriesView({
               key={item.id}
             >
               <button
+                type="button"
                 className="shopping-check"
+                aria-pressed={item.checked}
+                aria-label={`${item.checked ? "Uncheck" : "Check"} ${item.name}`}
                 onClick={() => toggle(item.id)}
               >
                 <span className="big-check">✓</span>
