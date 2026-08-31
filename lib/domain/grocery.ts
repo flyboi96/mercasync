@@ -23,6 +23,7 @@ export type GroceryRunItem = GroceryNeed & {
   manual?: boolean;
   note?: string;
   section?: string;
+  forceBuy?: boolean;
 };
 
 const storeNames = {
@@ -39,7 +40,7 @@ export function groceryNeedsFingerprint(needs: GroceryNeed[]) {
 }
 
 export function mergeGroceryRunItems(needs: GroceryNeed[], existing: GroceryRunItem[]) {
-  const preserved = existing.filter((item) => item.checked || item.manual);
+  const preserved = existing.filter((item) => item.checked || (item.manual && (!item.sources.includes('Today’s King Soopers list') || item.forceBuy || item.section === 'Household' || item.section === 'Personal care & health')));
   const checkedIds = new Set(preserved.map((item) => item.id));
   const pending = needs
     .filter((need) => !checkedIds.has(need.id))

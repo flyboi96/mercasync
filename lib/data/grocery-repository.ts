@@ -108,7 +108,7 @@ export async function addManualGroceryItem(weekStart: string, item: { name: stri
     const itemId = canonicalItemId(cleanName);
     const unit = normalizeUnit(item.unit);
     const id = `manual:${item.store}:${itemId}:${unit}`;
-    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, note: item.note?.trim() || '' };
+    const manual: GroceryRunItem = { id, itemId, name: cleanName, quantity: item.quantity, unit, store: item.store, inventoryUsed: 0, sources: ['Manually added'], checked: false, purchasedQuantity: 0, purchasedAt: null, manual: true, forceBuy: true, note: item.note?.trim() || '' };
     const items = dedupeGroceryRunItems([...existing.filter((candidate) => candidate.id !== id), manual]);
     transaction.set(runRef, { weekStart, items, calculationFingerprint: snapshot.data()?.calculationFingerprint || 'manual', createdBy: snapshot.data()?.createdBy || auth.currentUser!.uid, createdAt: snapshot.data()?.createdAt || serverTimestamp(), updatedBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
   });

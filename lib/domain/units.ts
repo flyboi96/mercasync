@@ -12,6 +12,8 @@ const UNIT_ALIASES: Record<string, string> = {
 
 const ITEM_ALIASES: Record<string, string> = {
   yogurt: 'greek-yogurt', 'greek-yoghurt': 'greek-yogurt',
+  'rolled-oats': 'quick-oats',
+  'baby-spinach-or-romaine-greens': 'baby-spinach',
   cucumbers: 'cucumber', eggs: 'eggs',
   'chicken-breasts': 'chicken-breast', 'chicken-thigh': 'chicken-thighs',
 };
@@ -48,6 +50,11 @@ export function convertQuantity(quantity: number, fromUnit: string, toUnit: stri
 const ITEM_UNIT_EQUIVALENTS: Record<string, { unit: string; baseQuantity: number }[]> = {
   almonds: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 5 }],
   'baby-spinach': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 }],
+  'greek-yogurt': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 8 }],
+  honey: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'tbsp', baseQuantity: 4 / 3 }],
+  'quick-oats': [{ unit: 'bag', baseQuantity: 10 }, { unit: 'cup', baseQuantity: 1 }],
+  'olive-oil': [{ unit: 'each', baseQuantity: 32 }, { unit: 'tbsp', baseQuantity: 1 }],
+  'soy-sauce': [{ unit: 'each', baseQuantity: 32 }, { unit: 'tbsp', baseQuantity: 1 }],
 };
 
 export function convertItemQuantity(itemId: string, quantity: number, fromUnit: string, toUnit: string): number | null {
