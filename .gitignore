@@ -30,6 +30,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Private one-time household imports. These can contain personal inventory,
+# recipes, and grocery history and must never enter the public repository.
+/scripts/import-household-baseline.mjs
+
 # Firebase local state
 /.firebase/
 /firebase-debug.log
