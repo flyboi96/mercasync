@@ -16,6 +16,7 @@ describe('ingredient normalization', () => {
 
   it('converts a known ingredient between recipe measures', () => {
     expect(convertItemQuantity('almonds', 5, 'oz', 'cup')).toBe(1);
+    expect(convertItemQuantity('baby-spinach', 1, 'lb', 'cup')).toBe(16);
   });
 
   it('refuses unsafe conversions between unrelated dimensions', () => {

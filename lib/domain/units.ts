@@ -47,14 +47,17 @@ export function convertQuantity(quantity: number, fromUnit: string, toUnit: stri
 
 const ITEM_UNIT_EQUIVALENTS: Record<string, { unit: string; baseQuantity: number }[]> = {
   almonds: [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 / 5 }],
+  'baby-spinach': [{ unit: 'oz', baseQuantity: 1 }, { unit: 'cup', baseQuantity: 1 }],
 };
 
 export function convertItemQuantity(itemId: string, quantity: number, fromUnit: string, toUnit: string): number | null {
   const standard = convertQuantity(quantity, fromUnit, toUnit);
   if (standard != null) return standard;
   const equivalents = ITEM_UNIT_EQUIVALENTS[canonicalItemId(itemId)];
-  const from = equivalents?.find((entry) => entry.unit === normalizeUnit(fromUnit));
+  const from = equivalents?.find((entry) => convertQuantity(quantity, fromUnit, entry.unit) != null);
   const to = equivalents?.find((entry) => entry.unit === normalizeUnit(toUnit));
   if (!from || !to) return null;
-  return Math.round(quantity / from.baseQuantity * to.baseQuantity * 100) / 100;
+  const normalizedQuantity = convertQuantity(quantity, fromUnit, from.unit);
+  if (normalizedQuantity == null) return null;
+  return Math.round(normalizedQuantity / from.baseQuantity * to.baseQuantity * 100) / 100;
 }
