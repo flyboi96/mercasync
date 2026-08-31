@@ -211,9 +211,14 @@ const nav = [
   { label: "Plan", icon: "⌂" },
   { label: "Calendar", icon: "□" },
   { label: "Recipes", icon: "◇" },
+  { label: "Inventory", icon: "◫" },
   { label: "Groceries", icon: "✓" },
   { label: "Settings", icon: "⚙" },
 ];
+
+// Inventory is a daily action on a phone. Settings remains one tap away from
+// the household button in the header, so the bottom bar stays comfortably sized.
+const mobileNav = nav.filter((item) => item.label !== "Settings");
 
 // The household's default Costco rhythm starts with the first Tuesday after
 // this product launch and repeats every other Tuesday. A saved trip date always
@@ -899,10 +904,15 @@ export default function Home() {
             <span>MercaSync</span>
             <small className="version-badge">v{APP_VERSION}</small>
           </div>
-          <div className="mobile-people">
+          <button
+            type="button"
+            className="mobile-people"
+            aria-label="Open settings"
+            onClick={() => setActive("Settings")}
+          >
             <span className="avatar alex">A</span>
             <span className="avatar nathalia">N</span>
-          </div>
+          </button>
         </header>
         <header className="topbar">
           <div>
@@ -1066,7 +1076,7 @@ export default function Home() {
         )}
       </section>
       <nav className="bottom-nav" aria-label="Mobile navigation">
-        {nav.map((item) => (
+        {mobileNav.map((item) => (
           <button
             key={item.label}
             className={active === item.label ? "active" : ""}

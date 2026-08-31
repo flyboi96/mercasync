@@ -11,6 +11,9 @@
   --surface: #fffdf8;
 }
 
+/* The overlapping household avatars double as the compact Settings button. */
+.mobile-people { padding: 0; border: 0; background: transparent; cursor: pointer; }
+
 .version-badge { margin-left: auto; padding: 4px 7px; border-radius: 999px; color: var(--green); background: #dce9dd; font: 800 9px/1 Arial, sans-serif; letter-spacing: .04em; }
 .automation-card { width: 100%; color: var(--ink); text-align: left; cursor: pointer; }
 .primary-button.saved { background: #e3eee6; color: var(--green); box-shadow: none; }
